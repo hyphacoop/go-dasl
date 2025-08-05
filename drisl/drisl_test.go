@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"math/big"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/fxamacker/cbor/v2"
 )
@@ -23,6 +25,7 @@ type daslTestCase struct {
 }
 
 func TestDaslJson(t *testing.T) {
+	// Tests from https://github.com/hyphacoop/dasl-testing
 	// Parse all the JSON files and run all the relevant tests as subtests
 	// Kind of like table-driven testing, but on the fly
 	// https://go.dev/wiki/TableDrivenTests
@@ -59,6 +62,8 @@ func runTests(t *testing.T, tests []*daslTestCase) {
 		if err != nil {
 			panic(fmt.Errorf("failed to decode hex: %s", test.Data))
 		}
+
+		test.Name = fmt.Sprintf("%s-%s", test.Type, test.Name)
 
 		switch test.Type {
 		case "roundtrip":
@@ -115,5 +120,43 @@ func runTests(t *testing.T, tests []*daslTestCase) {
 		default:
 			panic(fmt.Errorf("unknown test type '%s'", test.Type))
 		}
+	}
+}
+
+var marshalTests = []struct {
+	name string
+	in   any
+	out  string
+}{
+	{"time.Time", time.Unix(1234567890, 123456789).UTC(), "781e323030392d30322d31335432333a33313a33302e3132333435363738395a"},
+	{"small big.Int", big.NewInt(1), "01"},
+	{"small negative big.Int", big.NewInt(-1), "20"},
+	{"float32", float32(123), "fb3ff8000000000000"},
+	{"reduceable int32", int32(1), "01"},
+}
+
+// TestMarshal tests encoding Go objects with more versatility than the DASL test suite.
+// Objects that are invalid to encode are not tested in this function.
+func TestMarshal(t *testing.T) {
+	for _, tt := range marshalTests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, err := Marshal(tt.in)
+			outBytes, hexErr := hex.DecodeString(tt.out)
+			if hexErr != nil {
+				panic(hexErr)
+			}
+			if !bytes.Equal(outBytes, b) || err != nil {
+				t.Errorf(`Marshal(%#v) = %x, %v, want match for %s, nil`, tt.in, b, err, tt.out)
+			}
+		})
+	}
+}
+
+func TestBigBigInt(t *testing.T) {
+	var i big.Int
+	i.SetString("18446744073709551616", 10)
+	b, err := Marshal(i)
+	if err == nil {
+		t.Errorf(`Marshal(big.Int(2^64)) = %x, %v, want error`, b, err)
 	}
 }

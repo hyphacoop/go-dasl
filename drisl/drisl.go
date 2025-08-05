@@ -57,6 +57,7 @@ func init() {
 		NaNConvert:    cbor.NaNConvertReject,
 		InfConvert:    cbor.InfConvertReject,
 		BigIntConvert: cbor.BigIntConvertShortest,
+		Time:          cbor.TimeRFC3339Nano,
 		TimeTag:       cbor.EncTagNone,
 		IndefLength:   cbor.IndefLengthForbidden,
 	}.EncModeWithSharedTags(cborTags)
