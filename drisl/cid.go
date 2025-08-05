@@ -53,7 +53,8 @@ func (c *Cid) UnmarshalCBOR(b []byte) error {
 		return fmt.Errorf("got CBOR CID prefix 0x%02x, expect prefix 0x00", cidData[0])
 	}
 
-	parsed, err := cid.Cast(cidData)
+	// Skip 0x00 prefix
+	parsed, err := cid.Cast(cidData[1:])
 	if err != nil {
 		return err
 	}
