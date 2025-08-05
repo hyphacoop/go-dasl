@@ -1,8 +1,8 @@
-name: Go
+name: Test
 on: [push]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -12,7 +12,5 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: 'stable'
-      - name: Install dependencies
-        run: go get .
       - name: Test with the Go CLI
-        run: go test
+        run: go test ./...
