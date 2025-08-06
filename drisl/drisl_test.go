@@ -63,7 +63,10 @@ func TestDaslJson(t *testing.T) {
 
 func runTests(t *testing.T, tests []*daslTestCase) {
 	for _, test := range tests {
-		if !slices.Contains(test.Tags, "basic") && !slices.Contains(test.Tags, "dag-cbor") {
+		isRelevantTest := slices.ContainsFunc(test.Tags, func(tag string) bool {
+			return tag == "basic" || tag == "dag-cbor" || tag == "dasl-cid"
+		})
+		if !isRelevantTest {
 			continue
 		}
 		testData := hexDecode(test.Data)

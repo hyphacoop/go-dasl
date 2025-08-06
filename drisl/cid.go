@@ -10,17 +10,44 @@ import (
 
 const CidTagNumber = 42
 
+type ForbiddenCidError struct {
+	c Cid
+}
+
+func (e *ForbiddenCidError) Error() string {
+	return fmt.Sprintf("CID does not conform to DASL CID specification: %s", e.c.String())
+}
+
 // Cid is go-cid with CBOR marshalling support.
 type Cid struct {
 	cid.Cid
 }
 
-// TODO: DASL CID checks
+func (c Cid) IsDASL() bool {
+	// https://dasl.ing/cid.html
+	// https://dasl.ing/bdasl.html
+
+	if !c.Defined() {
+		return false
+	}
+	if c.Version() != 1 {
+		return false
+	}
+	prefix := c.Prefix()
+	if prefix.Codec != 0x55 && prefix.Codec != 0x71 {
+		return false
+	}
+	if prefix.MhType != 0x12 && prefix.MhType != 0x1e {
+		return false
+	}
+	return true
+}
 
 func (c Cid) MarshalCBOR() ([]byte, error) {
-	if !c.Defined() {
-		return nil, errors.New("undefined CID")
+	if !c.IsDASL() {
+		return nil, &ForbiddenCidError{c}
 	}
+
 	// CID in CBOR is just CID bytes with 0x00 prepended
 	return cbor.Marshal(cbor.Tag{
 		Number:  CidTagNumber,
@@ -59,5 +86,10 @@ func (c *Cid) UnmarshalCBOR(b []byte) error {
 		return err
 	}
 	*c = Cid{parsed}
+
+	if !c.IsDASL() {
+		return &ForbiddenCidError{*c}
+	}
+
 	return nil
 }
