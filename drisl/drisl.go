@@ -24,27 +24,20 @@ func init() {
 		panic(err)
 	}
 
-	// Reject undefined
-	svr, err := cbor.NewSimpleValueRegistryFromDefaults(
-		cbor.WithRejectedSimpleValue(cbor.SimpleValue(23)),
-	)
-	if err != nil {
-		panic(err)
-	}
+	svr := cbor.NewSimpleValueRegistryStrict()
 
 	drislDecMode, err = cbor.DecOptions{
-		// Easier to re-encode to JSON later
-		DefaultMapType: reflect.TypeOf(map[string]any{}),
-
 		// Try to be strict
 		DupMapKey:        cbor.DupMapKeyEnforcedAPF,
 		TimeTag:          cbor.DecTagOptional,
 		IndefLength:      cbor.IndefLengthForbidden,
+		DefaultMapType:   reflect.TypeOf(map[string]any{}),
 		MapKeyByteString: cbor.MapKeyByteStringForbidden,
 		SimpleValues:     svr,
 		NaN:              cbor.NaNDecodeForbidden,
 		Inf:              cbor.InfDecodeForbidden,
 		BignumTag:        cbor.BignumTagForbidden,
+		Float64Only:      true,
 	}.DecModeWithSharedTags(cborTags)
 	if err != nil {
 		panic(err)
@@ -52,14 +45,16 @@ func init() {
 
 	drislEncMode, err = cbor.EncOptions{
 		// Try to be strict
-		Sort:          cbor.SortLengthFirst,
-		ShortestFloat: cbor.ShortestFloatNone,
-		NaNConvert:    cbor.NaNConvertReject,
-		InfConvert:    cbor.InfConvertReject,
-		BigIntConvert: cbor.BigIntConvertShortest,
-		Time:          cbor.TimeRFC3339Nano,
-		TimeTag:       cbor.EncTagNone,
-		IndefLength:   cbor.IndefLengthForbidden,
+		Sort:             cbor.SortLengthFirst,
+		ShortestFloat:    cbor.ShortestFloatNone,
+		NaNConvert:       cbor.NaNConvertReject,
+		InfConvert:       cbor.InfConvertReject,
+		BigIntConvert:    cbor.BigIntConvertOnly,
+		Time:             cbor.TimeRFC3339Nano,
+		TimeTag:          cbor.EncTagNone,
+		IndefLength:      cbor.IndefLengthForbidden,
+		MapKeyStringOnly: true,
+		SimpleValues:     svr,
 	}.EncModeWithSharedTags(cborTags)
 }
 
@@ -72,5 +67,7 @@ func Unmarshal(data []byte, v any) error {
 }
 
 func Valid(data []byte) bool {
-	return drislDecMode.Wellformed(data) == nil
+	// XXX: this is correct but inefficient
+	var v any
+	return drislDecMode.Unmarshal(data, &v) == nil
 }

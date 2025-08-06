@@ -72,6 +72,12 @@ func runTests(t *testing.T, tests []*daslTestCase) {
 		testData := hexDecode(test.Data)
 		test.Name = fmt.Sprintf("%s-%s", test.Type, test.Name)
 
+		if test.Name == "invalid_out-simple value 'undefined'" {
+			// Skip this test because it's incorrect
+			// https://github.com/hyphacoop/dasl-testing/issues/4
+			continue
+		}
+
 		switch test.Type {
 		case "roundtrip":
 			t.Run(test.Name, func(t *testing.T) {
@@ -177,6 +183,7 @@ func TestFloat32UnmarshalSafe(t *testing.T) {
 }
 
 // TestFloat32UnmarshalUnsafe tests decoding a float64 into a float32 for a value that doesn't fit.
+// https://github.com/hyphacoop/go-dasl/issues/7
 func TestFloat32UnmarshalUnsafe(t *testing.T) {
 	var v float32
 	if err := Unmarshal(hexDecode("fb3ff8000000000001"), &v); err == nil {
@@ -188,5 +195,19 @@ func TestIntUnmarshalUnsafe(t *testing.T) {
 	var v uint8
 	if err := Unmarshal(hexDecode("190100"), &v); err == nil {
 		t.Errorf("Unmarshal(256) = %d, wanted error", v)
+	}
+}
+
+func TestUnassignedSimpleValueMarshal(t *testing.T) {
+	b, err := Marshal(cbor.SimpleValue(0))
+	if err == nil {
+		t.Errorf(`Marshal(SimpleValue(0)) = %x, %v, want error`, b, err)
+	}
+}
+
+func TestUnassignedSimpleValueUnmarshal(t *testing.T) {
+	var v any
+	if err := Unmarshal([]byte{0xe0}, &v); err == nil {
+		t.Errorf("Unmarshal(SimpleValue(0)) = %v, wanted error", v)
 	}
 }
