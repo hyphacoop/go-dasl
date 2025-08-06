@@ -17,6 +17,14 @@ import (
 	"github.com/fxamacker/cbor/v2"
 )
 
+func hexDecode(s string) []byte {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
 type daslTestCase struct {
 	Type string
 	Data string
@@ -58,11 +66,7 @@ func runTests(t *testing.T, tests []*daslTestCase) {
 		if !slices.Contains(test.Tags, "basic") && !slices.Contains(test.Tags, "dag-cbor") {
 			continue
 		}
-		testData, err := hex.DecodeString(test.Data)
-		if err != nil {
-			panic(fmt.Errorf("failed to decode hex: %s", test.Data))
-		}
-
+		testData := hexDecode(test.Data)
 		test.Name = fmt.Sprintf("%s-%s", test.Type, test.Name)
 
 		switch test.Type {
@@ -141,11 +145,7 @@ func TestMarshal(t *testing.T) {
 	for _, tt := range marshalTests {
 		t.Run(tt.name, func(t *testing.T) {
 			b, err := Marshal(tt.in)
-			outBytes, hexErr := hex.DecodeString(tt.out)
-			if hexErr != nil {
-				panic(hexErr)
-			}
-			if !bytes.Equal(outBytes, b) || err != nil {
+			if !bytes.Equal(hexDecode(tt.out), b) || err != nil {
 				t.Errorf(`Marshal(%#v) = %x, %v, want match for %s, nil`, tt.in, b, err, tt.out)
 			}
 		})
@@ -158,5 +158,32 @@ func TestBigBigInt(t *testing.T) {
 	b, err := Marshal(i)
 	if err == nil {
 		t.Errorf(`Marshal(big.Int(2^64)) = %x, %v, want error`, b, err)
+	}
+}
+
+// TestFloat32UnmarshalSafe tests decoding a float64 into a float32 for a value that fits.
+func TestFloat32UnmarshalSafe(t *testing.T) {
+	var v float32
+	if err := Unmarshal(hexDecode("fb3ff8000000000000"), &v); err != nil {
+		t.Errorf(`Unmarshal(1.5) returned err: %v`, err)
+		return
+	}
+	if v != 1.5 {
+		t.Errorf(`Unmarshal(1.5) = %f, want 1.5`, v)
+	}
+}
+
+// TestFloat32UnmarshalUnsafe tests decoding a float64 into a float32 for a value that doesn't fit.
+func TestFloat32UnmarshalUnsafe(t *testing.T) {
+	var v float32
+	if err := Unmarshal(hexDecode("fb3ff8000000000001"), &v); err == nil {
+		t.Errorf(`Unmarshal(1.5000000000000002) = %f, wanted error`, v)
+	}
+}
+
+func TestIntUnmarshalUnsafe(t *testing.T) {
+	var v uint8
+	if err := Unmarshal(hexDecode("190100"), &v); err == nil {
+		t.Errorf("Unmarshal(256) = %d, wanted error", v)
 	}
 }
