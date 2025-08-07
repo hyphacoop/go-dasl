@@ -5,6 +5,7 @@ go 1.24.5
 require (
 	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/ipfs/go-cid v0.5.0
+	pgregory.net/rapid v1.2.0
 )
 
 require (

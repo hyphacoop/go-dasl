@@ -14,3 +14,17 @@ jobs:
           go-version: 'stable'
       - name: Test with the Go CLI
         run: go test ./...
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+      - name: Fuzz unmarshalling
+        run: go test -fuzz=FuzzUnmarshal -run=FuzzUnmarshal -fuzztime=10m ./...
+      - name: Fuzz marshalling
+        run: go test -fuzz=FuzzMarshal -run=FuzzMarshal -fuzztime=10m ./...
