@@ -23,4 +23,4 @@ require (
 	lukechampine.com/blake3 v1.1.6 // indirect
 )
 
-replace github.com/fxamacker/cbor/v2 => github.com/hyphacoop/cbor/v2 v2.0.0-20250806205313-278ef6e31a9c
+replace github.com/fxamacker/cbor/v2 => github.com/hyphacoop/cbor/v2 v2.0.0-20250807190452-ee4c04156be0

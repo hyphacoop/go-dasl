@@ -38,6 +38,7 @@ func init() {
 		Inf:              cbor.InfDecodeForbidden,
 		BignumTag:        cbor.BignumTagForbidden,
 		Float64Only:      true,
+		TagsMd:           cbor.TagsLimited,
 	}.DecModeWithSharedTags(cborTags)
 	if err != nil {
 		panic(err)
@@ -55,6 +56,7 @@ func init() {
 		IndefLength:      cbor.IndefLengthForbidden,
 		MapKeyStringOnly: true,
 		SimpleValues:     svr,
+		Float64Only:      true,
 	}.EncModeWithSharedTags(cborTags)
 }
 
@@ -66,8 +68,8 @@ func Unmarshal(data []byte, v any) error {
 	return drislDecMode.Unmarshal(data, v)
 }
 
-func Valid(data []byte) bool {
-	// XXX: this is correct but inefficient
-	var v any
-	return drislDecMode.Unmarshal(data, &v) == nil
-}
+// func Valid(data []byte) bool {
+// 	// XXX: this is correct but inefficient
+// 	var v any
+// 	return drislDecMode.Unmarshal(data, &v) == nil
+// }
