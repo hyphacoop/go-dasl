@@ -1,4 +1,4 @@
-package drisl
+package drisl_test
 
 import (
 	"bytes"
@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
+	"github.com/hyphacoop/go-dasl/drisl"
 )
 
 func hexDecode(s string) []byte {
@@ -76,11 +77,11 @@ func runTests(t *testing.T, tests []*daslTestCase) {
 		case "roundtrip":
 			t.Run(test.Name, func(t *testing.T) {
 				var v any
-				if err := Unmarshal(testData, &v); err != nil {
+				if err := drisl.Unmarshal(testData, &v); err != nil {
 					t.Errorf("Unmarshal error: %v", err)
 					return
 				}
-				b, err := Marshal(v)
+				b, err := drisl.Marshal(v)
 				if err != nil {
 					t.Errorf("Marshal error: %v", err)
 					return
@@ -90,19 +91,19 @@ func runTests(t *testing.T, tests []*daslTestCase) {
 				}
 			})
 			// t.Run(test.Name+"-Valid", func(t *testing.T) {
-			// 	if !Valid(testData) {
+			// 	if !drisl.Valid(testData) {
 			// 		t.Errorf("got false, want true")
 			// 	}
 			// })
 		case "invalid_in":
 			t.Run(test.Name, func(t *testing.T) {
 				var v any
-				if err := Unmarshal(testData, &v); err == nil {
+				if err := drisl.Unmarshal(testData, &v); err == nil {
 					t.Error("Unmarshal didn't raise an error")
 				}
 			})
 			// t.Run(test.Name+"-Valid", func(t *testing.T) {
-			// 	if Valid(testData) {
+			// 	if drisl.Valid(testData) {
 			// 		t.Errorf("got true, want false")
 			// 	}
 			// })
@@ -115,12 +116,12 @@ func runTests(t *testing.T, tests []*daslTestCase) {
 					t.Errorf("cbor.Unmarshal failed unexpectedly: %v", err)
 					return
 				}
-				if _, err := Marshal(v); err == nil {
+				if _, err := drisl.Marshal(v); err == nil {
 					t.Error("Marshal didn't raise an error")
 				}
 			})
 			// t.Run(test.Name+"-Valid", func(t *testing.T) {
-			// 	if Valid(testData) {
+			// 	if drisl.Valid(testData) {
 			// 		t.Errorf("got true, want false")
 			// 	}
 			// })
@@ -147,7 +148,7 @@ var marshalTests = []struct {
 func TestMarshal(t *testing.T) {
 	for _, tt := range marshalTests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := Marshal(tt.in)
+			b, err := drisl.Marshal(tt.in)
 			if !bytes.Equal(hexDecode(tt.out), b) || err != nil {
 				t.Errorf(`Marshal(%#v) = %x, %v, want match for %s, nil`, tt.in, b, err, tt.out)
 			}
@@ -158,7 +159,7 @@ func TestMarshal(t *testing.T) {
 func TestBigBigInt(t *testing.T) {
 	var i big.Int
 	i.SetString("18446744073709551616", 10)
-	b, err := Marshal(i)
+	b, err := drisl.Marshal(i)
 	if err == nil {
 		t.Errorf(`Marshal(big.Int(2^64)) = %x, %v, want error`, b, err)
 	}
@@ -167,7 +168,7 @@ func TestBigBigInt(t *testing.T) {
 // TestFloat32UnmarshalSafe tests decoding a float64 into a float32 for a value that fits.
 func TestFloat32UnmarshalSafe(t *testing.T) {
 	var v float32
-	if err := Unmarshal(hexDecode("fb3ff8000000000000"), &v); err != nil {
+	if err := drisl.Unmarshal(hexDecode("fb3ff8000000000000"), &v); err != nil {
 		t.Errorf(`Unmarshal(1.5) returned err: %v`, err)
 		return
 	}
@@ -180,20 +181,20 @@ func TestFloat32UnmarshalSafe(t *testing.T) {
 // https://github.com/hyphacoop/go-dasl/issues/7
 func TestFloat32UnmarshalUnsafe(t *testing.T) {
 	var v float32
-	if err := Unmarshal(hexDecode("fb3ff8000000000001"), &v); err == nil {
+	if err := drisl.Unmarshal(hexDecode("fb3ff8000000000001"), &v); err == nil {
 		t.Errorf(`Unmarshal(1.5000000000000002) = %f, wanted error`, v)
 	}
 }
 
 func TestIntUnmarshalUnsafe(t *testing.T) {
 	var v uint8
-	if err := Unmarshal(hexDecode("190100"), &v); err == nil {
+	if err := drisl.Unmarshal(hexDecode("190100"), &v); err == nil {
 		t.Errorf("Unmarshal(256) = %d, wanted error", v)
 	}
 }
 
 func TestUnassignedSimpleValueMarshal(t *testing.T) {
-	b, err := Marshal(cbor.SimpleValue(0))
+	b, err := drisl.Marshal(cbor.SimpleValue(0))
 	if err == nil {
 		t.Errorf(`Marshal(SimpleValue(0)) = %x, %v, want error`, b, err)
 	}
@@ -201,7 +202,7 @@ func TestUnassignedSimpleValueMarshal(t *testing.T) {
 
 func TestUnassignedSimpleValueUnmarshal(t *testing.T) {
 	var v any
-	if err := Unmarshal([]byte{0xe0}, &v); err == nil {
+	if err := drisl.Unmarshal([]byte{0xe0}, &v); err == nil {
 		t.Errorf("Unmarshal(SimpleValue(0)) = %v, wanted error", v)
 	}
 }
@@ -211,21 +212,21 @@ func TestBuiltinTagUnmarshal(t *testing.T) {
 	// Decode tag type 1 (epoch int)
 	// Normally this would decode into a time.Time
 	// But here should fail because tags are banned
-	if err := Unmarshal(hexDecode("c11a514b67b0"), &v); err == nil {
+	if err := drisl.Unmarshal(hexDecode("c11a514b67b0"), &v); err == nil {
 		t.Errorf("Unmarshal(epoch tag) = %v, wanted error", v)
 	}
 }
 
 func TestCborTagUnmarshal(t *testing.T) {
 	var v cbor.Tag
-	if err := Unmarshal(hexDecode("c11a514b67b0"), &v); err == nil {
+	if err := drisl.Unmarshal(hexDecode("c11a514b67b0"), &v); err == nil {
 		t.Errorf("Unmarshal tag into cbor.Tag: got %v, wanted error", v)
 	}
 }
 
 func TestCidUnmarshal(t *testing.T) {
-	var v Cid
-	if err := Unmarshal(hexDecode("d82a582500015512205891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"), &v); err != nil {
+	var v drisl.Cid
+	if err := drisl.Unmarshal(hexDecode("d82a582500015512205891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"), &v); err != nil {
 		t.Errorf("Unmarshal(cid) into Cid: got error: %v", err)
 	}
 }
