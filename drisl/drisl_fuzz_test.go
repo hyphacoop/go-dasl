@@ -5,7 +5,6 @@ import (
 	"math"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/hyphacoop/go-dasl/drisl"
 	"pgregory.net/rapid"
@@ -43,16 +42,19 @@ func FuzzUnmarshal(f *testing.F) {
 	})
 }
 
-func treeGenerator() *rapid.Generator[map[any]any] {
+func treeGenerator() *rapid.Generator[map[string]any] {
 	terminatorGens := []*rapid.Generator[any]{
 		rapid.Bool().AsAny(),
 		rapid.Float64().AsAny(),
 		rapid.Int64().AsAny(),
 		rapid.String().AsAny(),
-		rapid.Custom(func(t *rapid.T) time.Time {
-			sec, nsec := rapid.Int64().Draw(t, "sec"), rapid.Int64().Draw(t, "nsec")
-			return time.Unix(sec, nsec)
-		}).AsAny(),
+
+		// time.Time is ignored for now
+		// Because it doesn't roundtrip, it gets marshalled to a string
+		// rapid.Custom(func(t *rapid.T) time.Time {
+		// 	sec, nsec := rapid.Int64().Draw(t, "sec"), rapid.Int64().Draw(t, "nsec")
+		// 	return time.Unix(sec, nsec)
+		// }).AsAny(),
 	}
 	generators := []*rapid.Generator[any]{}
 	for _, terminator := range terminatorGens {
@@ -63,7 +65,10 @@ func treeGenerator() *rapid.Generator[map[any]any] {
 		rapid.Deferred(treeGenerator).AsAny(),
 		rapid.SliceOf(rapid.Deferred(treeGenerator)).AsAny(),
 	)
-	return rapid.MapOf(rapid.OneOf(terminatorGens...), rapid.OneOf(generators...))
+	generators = append(generators,
+		rapid.MapOf(rapid.String(), rapid.Deferred(treeGenerator).AsAny()).AsAny(),
+	)
+	return rapid.MapOf(rapid.String(), rapid.OneOf(generators...))
 }
 
 func FuzzMarshal(f *testing.F) {
@@ -79,6 +84,8 @@ func FuzzMarshal(f *testing.F) {
 			} else if !deepEqualWithNumericConversion(value, unmarshaled) {
 				t.Errorf("Expected %#v got %#v, (bz: %x)", value, unmarshaled, bz)
 			}
+		} else {
+			t.Errorf("struct %+v couldn't be marshalled: %v", value, err)
 		}
 	}))
 }

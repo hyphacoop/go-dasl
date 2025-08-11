@@ -230,3 +230,10 @@ func TestCidUnmarshal(t *testing.T) {
 		t.Errorf("Unmarshal(cid) into Cid: got error: %v", err)
 	}
 }
+
+func TestUnmarshalLongNegInt(t *testing.T) {
+	var v any
+	if err := drisl.Unmarshal(hexDecode("3800"), &v); err == nil {
+		t.Errorf("Unmarshal(-1_0) = %v, wanted error", v)
+	}
+}

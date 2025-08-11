@@ -28,17 +28,18 @@ func init() {
 
 	drislDecMode, err = cbor.DecOptions{
 		// Try to be strict
-		DupMapKey:        cbor.DupMapKeyEnforcedAPF,
-		TimeTag:          cbor.DecTagOptional,
-		IndefLength:      cbor.IndefLengthForbidden,
-		DefaultMapType:   reflect.TypeOf(map[string]any{}),
-		MapKeyByteString: cbor.MapKeyByteStringForbidden,
-		SimpleValues:     svr,
-		NaN:              cbor.NaNDecodeForbidden,
-		Inf:              cbor.InfDecodeForbidden,
-		BignumTag:        cbor.BignumTagForbidden,
-		Float64Only:      true,
-		TagsMd:           cbor.TagsLimited,
+		DupMapKey:         cbor.DupMapKeyEnforcedAPF,
+		TimeTag:           cbor.DecTagOptional,
+		IndefLength:       cbor.IndefLengthForbidden,
+		DefaultMapType:    reflect.TypeOf(map[string]any{}),
+		MapKeyByteString:  cbor.MapKeyByteStringForbidden,
+		SimpleValues:      svr,
+		NaN:               cbor.NaNDecodeForbidden,
+		Inf:               cbor.InfDecodeForbidden,
+		BignumTag:         cbor.BignumTagForbidden,
+		Float64Only:       true,
+		TagsMd:            cbor.TagsLimited,
+		EnforceIntPrefEnc: true,
 	}.DecModeWithSharedTags(cborTags)
 	if err != nil {
 		panic(err)
