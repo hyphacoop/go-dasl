@@ -48,13 +48,6 @@ func treeGenerator() *rapid.Generator[map[string]any] {
 		rapid.Float64().AsAny(),
 		rapid.Int64().AsAny(),
 		rapid.String().AsAny(),
-
-		// time.Time is ignored for now
-		// Because it doesn't roundtrip, it gets marshalled to a string
-		// rapid.Custom(func(t *rapid.T) time.Time {
-		// 	sec, nsec := rapid.Int64().Draw(t, "sec"), rapid.Int64().Draw(t, "nsec")
-		// 	return time.Unix(sec, nsec)
-		// }).AsAny(),
 	}
 	generators := []*rapid.Generator[any]{}
 	for _, terminator := range terminatorGens {

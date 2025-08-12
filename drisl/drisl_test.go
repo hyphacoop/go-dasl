@@ -136,7 +136,6 @@ var marshalTests = []struct {
 	in   any
 	out  string
 }{
-	{"time.Time", time.Unix(1234567890, 123456789).UTC(), "781e323030392d30322d31335432333a33313a33302e3132333435363738395a"},
 	{"small big.Int", big.NewInt(1), "01"},
 	{"small negative big.Int", big.NewInt(-1), "20"},
 	{"float32", float32(1.5), "fb3ff8000000000000"},
@@ -217,6 +216,21 @@ func TestBuiltinTagUnmarshal(t *testing.T) {
 	}
 }
 
+func TestTimeStringUnmarshal(t *testing.T) {
+	var v any
+	if err := drisl.Unmarshal(hexDecode("c07819323032352d30352d32365431363a31383a31372d30343a3030"), &v); err == nil {
+		t.Errorf("Unmarshal(time tag) = %v, wanted error", v)
+	}
+}
+
+func TestTimeStringMarshal(t *testing.T) {
+	v := time.Now()
+	b, err := drisl.Marshal(v)
+	if err == nil {
+		t.Errorf(`Marshal(time.Time) = %x, %v, want error`, b, err)
+	}
+}
+
 func TestCborTagUnmarshal(t *testing.T) {
 	var v cbor.Tag
 	if err := drisl.Unmarshal(hexDecode("c11a514b67b0"), &v); err == nil {
@@ -231,9 +245,68 @@ func TestCidUnmarshal(t *testing.T) {
 	}
 }
 
-func TestUnmarshalLongNegInt(t *testing.T) {
+func TestLongNegIntUnmarshal(t *testing.T) {
 	var v any
 	if err := drisl.Unmarshal(hexDecode("3800"), &v); err == nil {
 		t.Errorf("Unmarshal(-1_0) = %v, wanted error", v)
 	}
+}
+
+func TestStructMapNullUnmarshal(t *testing.T) {
+	// This CBOR map has a null key, which is illegal
+	// Make sure it can't be unmarshalled, even to a struct
+	var v struct {
+		A int `cbor:""`
+	}
+	err := drisl.Unmarshal(hexDecode("a1f630"), &v)
+	if err == nil {
+		t.Errorf("Unmarshal map with null key into struct = %v, wanted error", v)
+		return
+	}
+	t.Log(err)
+}
+
+func TestKeyasintMarshal(t *testing.T) {
+	v := struct {
+		A int `cbor:"1,keyasint"`
+	}{1}
+	b, err := drisl.Marshal(v)
+	if err == nil {
+		t.Errorf(`Marshal(keyasint) = %x, %v, want error`, b, err)
+	}
+}
+
+func TestKeyasintUnmarshal(t *testing.T) {
+	var v struct {
+		A int `cbor:"1,keyasint"`
+	}
+	err := drisl.Unmarshal(hexDecode("a10101"), &v)
+	if err == nil {
+		t.Errorf("Unmarshal map with int key into keyasint struct = %v, wanted error", v)
+		return
+	}
+	t.Log(err)
+}
+
+func TestStructMapOrderUnmarshal(t *testing.T) {
+	var v struct {
+		A int `cbor:"a"`
+		B int `cbor:"b"`
+	}
+	err := drisl.Unmarshal(hexDecode("a2616201616102"), &v)
+	if err == nil {
+		t.Errorf(`Unmarshal({"b":1,"a":2}) = %v, wanted error`, v)
+		return
+	}
+	t.Log(err)
+}
+
+func TestInvalidCidUnmarshal(t *testing.T) {
+	var v any
+	err := drisl.Unmarshal(hexDecode("d82a623030"), &v)
+	if err == nil {
+		t.Errorf("Unmarshal(bad Cid) = %v, wanted error", v)
+		return
+	}
+	t.Log(err)
 }

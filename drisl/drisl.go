@@ -28,18 +28,21 @@ func init() {
 
 	drislDecMode, err = cbor.DecOptions{
 		// Try to be strict
-		DupMapKey:         cbor.DupMapKeyEnforcedAPF,
-		TimeTag:           cbor.DecTagOptional,
-		IndefLength:       cbor.IndefLengthForbidden,
-		DefaultMapType:    reflect.TypeOf(map[string]any{}),
-		MapKeyByteString:  cbor.MapKeyByteStringForbidden,
-		SimpleValues:      svr,
-		NaN:               cbor.NaNDecodeForbidden,
-		Inf:               cbor.InfDecodeForbidden,
-		BignumTag:         cbor.BignumTagForbidden,
-		Float64Only:       true,
-		TagsMd:            cbor.TagsLimited,
-		EnforceIntPrefEnc: true,
+		DupMapKey:          cbor.DupMapKeyEnforcedAPF,
+		IndefLength:        cbor.IndefLengthForbidden,
+		DefaultMapType:     reflect.TypeOf(map[string]any{}),
+		MapKeyByteString:   cbor.MapKeyByteStringForbidden,
+		SimpleValues:       svr,
+		NaN:                cbor.NaNDecodeForbidden,
+		Inf:                cbor.InfDecodeForbidden,
+		BignumTag:          cbor.BignumTagForbidden,
+		Float64Only:        true,
+		TagsMd:             cbor.TagsLimited,
+		EnforceIntPrefEnc:  true,
+		MapKeyTypeStrict:   true,
+		DisableKeyAsInt:    true,
+		EnforceSort:        true,
+		KeepFloatPrecision: true,
 	}.DecModeWithSharedTags(cborTags)
 	if err != nil {
 		panic(err)
@@ -47,17 +50,18 @@ func init() {
 
 	drislEncMode, err = cbor.EncOptions{
 		// Try to be strict
-		Sort:             cbor.SortLengthFirst,
+		Sort:             cbor.SortBytewiseLexical,
 		ShortestFloat:    cbor.ShortestFloatNone,
 		NaNConvert:       cbor.NaNConvertReject,
 		InfConvert:       cbor.InfConvertReject,
 		BigIntConvert:    cbor.BigIntConvertOnly,
-		Time:             cbor.TimeRFC3339Nano,
+		Time:             cbor.TimeModeReject,
 		TimeTag:          cbor.EncTagNone,
 		IndefLength:      cbor.IndefLengthForbidden,
 		MapKeyStringOnly: true,
 		SimpleValues:     svr,
 		Float64Only:      true,
+		DisableKeyAsInt:  true,
 	}.EncModeWithSharedTags(cborTags)
 }
 
