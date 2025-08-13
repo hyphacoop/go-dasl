@@ -7,14 +7,14 @@ import (
 )
 
 var (
-	drislDecMode cbor.DecMode
-	drislEncMode cbor.EncMode
+	drislDecMode DecMode
+	drislEncMode EncMode
+	cborTags     cbor.TagSet
+	svr          *cbor.SimpleValueRegistry
 )
 
 func init() {
-	// Setup cbor lib options
-
-	cborTags := cbor.NewTagSet()
+	cborTags = cbor.NewTagSet()
 	err := cborTags.Add(
 		cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired},
 		reflect.TypeOf(Cid{}),
@@ -24,9 +24,60 @@ func init() {
 		panic(err)
 	}
 
-	svr := cbor.NewSimpleValueRegistryStrict()
+	svr = cbor.NewSimpleValueRegistryStrict()
 
-	drislDecMode, err = cbor.DecOptions{
+	drislDecMode, err = DecOptions{}.DecMode()
+	if err != nil {
+		panic(err)
+	}
+	drislEncMode, err = EncOptions{}.EncMode()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func Marshal(v any) ([]byte, error) {
+	return drislEncMode.Marshal(v)
+}
+
+func Unmarshal(data []byte, v any) error {
+	return drislDecMode.Unmarshal(data, v)
+}
+
+// func Valid(data []byte) bool {
+// 	// XXX: this is correct but inefficient
+// 	var v any
+// 	return drislDecMode.Unmarshal(data, &v) == nil
+// }
+
+// DecOptions specifies decoding options.
+type DecOptions struct {
+	// MaxNestedLevels specifies the max nested levels allowed for any combination of CBOR array, maps, and tags.
+	// Default is 32 levels and it can be set to [4, 65535]. Note that higher maximum levels of nesting can
+	// require larger amounts of stack to deserialize. Don't increase this higher than you require.
+	MaxNestedLevels int
+
+	// MaxArrayElements specifies the max number of elements for CBOR arrays.
+	// Default is 128*1024=131072 and it can be set to [16, 2147483647]
+	MaxArrayElements int
+
+	// MaxMapPairs specifies the max number of key-value pairs for CBOR maps.
+	// Default is 128*1024=131072 and it can be set to [16, 2147483647]
+	MaxMapPairs int
+}
+
+// DecMode is the main interface for decoding.
+type DecMode interface {
+	// Unmarshal parses the CBOR-encoded data into the value pointed to by v
+	// using the decoding mode.  If v is nil, not a pointer, or a nil pointer,
+	// Unmarshal returns an error.
+	//
+	// See the documentation for Unmarshal for details.
+	Unmarshal(data []byte, v any) error
+}
+
+func (opts DecOptions) DecMode() (DecMode, error) {
+	return cbor.DecOptions{
 		// Try to be strict
 		DupMapKey:          cbor.DupMapKeyEnforcedAPF,
 		IndefLength:        cbor.IndefLengthForbidden,
@@ -43,12 +94,24 @@ func init() {
 		DisableKeyAsInt:    true,
 		EnforceSort:        true,
 		KeepFloatPrecision: true,
+		MaxNestedLevels:    opts.MaxNestedLevels,
+		MaxArrayElements:   opts.MaxArrayElements,
+		MaxMapPairs:        opts.MaxMapPairs,
 	}.DecModeWithSharedTags(cborTags)
-	if err != nil {
-		panic(err)
-	}
+}
 
-	drislEncMode, err = cbor.EncOptions{
+// EncOptions specifies encoding options.
+type EncOptions struct {
+	// Nothing yet.
+}
+
+// EncMode is the main interface for encoding.
+type EncMode interface {
+	Marshal(v any) ([]byte, error)
+}
+
+func (opts EncOptions) EncMode() (EncMode, error) {
+	return cbor.EncOptions{
 		// Try to be strict
 		Sort:             cbor.SortBytewiseLexical,
 		ShortestFloat:    cbor.ShortestFloatNone,
@@ -64,17 +127,3 @@ func init() {
 		DisableKeyAsInt:  true,
 	}.EncModeWithSharedTags(cborTags)
 }
-
-func Marshal(v any) ([]byte, error) {
-	return drislEncMode.Marshal(v)
-}
-
-func Unmarshal(data []byte, v any) error {
-	return drislDecMode.Unmarshal(data, v)
-}
-
-// func Valid(data []byte) bool {
-// 	// XXX: this is correct but inefficient
-// 	var v any
-// 	return drislDecMode.Unmarshal(data, &v) == nil
-// }

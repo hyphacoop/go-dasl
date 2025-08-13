@@ -63,6 +63,14 @@ func TestDaslJson(t *testing.T) {
 }
 
 func runTests(t *testing.T, tests []*daslTestCase) {
+	// Use decoder with increased depth to pass depth test
+	dec, err := drisl.DecOptions{
+		MaxNestedLevels: 3001,
+	}.DecMode()
+	if err != nil {
+		panic(err)
+	}
+
 	for _, test := range tests {
 		isRelevantTest := slices.ContainsFunc(test.Tags, func(tag string) bool {
 			return tag == "basic" || tag == "dag-cbor" || tag == "dasl-cid"
@@ -77,7 +85,7 @@ func runTests(t *testing.T, tests []*daslTestCase) {
 		case "roundtrip":
 			t.Run(test.Name, func(t *testing.T) {
 				var v any
-				if err := drisl.Unmarshal(testData, &v); err != nil {
+				if err := dec.Unmarshal(testData, &v); err != nil {
 					t.Errorf("Unmarshal error: %v", err)
 					return
 				}
@@ -98,7 +106,7 @@ func runTests(t *testing.T, tests []*daslTestCase) {
 		case "invalid_in":
 			t.Run(test.Name, func(t *testing.T) {
 				var v any
-				if err := drisl.Unmarshal(testData, &v); err == nil {
+				if err := dec.Unmarshal(testData, &v); err == nil {
 					t.Error("Unmarshal didn't raise an error")
 				}
 			})
