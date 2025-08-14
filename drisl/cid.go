@@ -15,7 +15,7 @@ type ForbiddenCidError struct {
 }
 
 func (e *ForbiddenCidError) Error() string {
-	return fmt.Sprintf("CID does not conform to DASL CID specification: %s", e.c.String())
+	return fmt.Sprintf("invalid cid: does not conform to DASL CID specification: %s", e.c.String())
 }
 
 // Cid is go-cid with CBOR marshalling support.
@@ -69,15 +69,15 @@ func (c *Cid) UnmarshalCBOR(b []byte) error {
 	// Check tag content
 	cidData, isByteString := tag.Content.([]byte)
 	if !isByteString {
-		return fmt.Errorf("got tag content type %T, expect tag content []byte", tag.Content)
+		return fmt.Errorf("invalid cid: unmarshal: got tag content type %T, expect tag content []byte", tag.Content)
 	}
 
 	// Verify CBOR CID encoding
 	if len(cidData) == 0 {
-		return errors.New("zero-length CID")
+		return errors.New("invalid cid: unmarshal: no data")
 	}
 	if cidData[0] != 0x00 {
-		return fmt.Errorf("got CBOR CID prefix 0x%02x, expect prefix 0x00", cidData[0])
+		return fmt.Errorf("invalid cid: unmarshal: got CBOR CID prefix 0x%02x, expect prefix 0x00", cidData[0])
 	}
 
 	// Skip 0x00 prefix

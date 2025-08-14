@@ -1,5 +1,5 @@
-github.com/hyphacoop/cbor/v2 v2.0.0-20250812211013-cae3a5eec78c h1:jq+56rvs3FJgdT0L1NZU5JuM2bPdCUb33aaEIi9Xy1A=
-github.com/hyphacoop/cbor/v2 v2.0.0-20250812211013-cae3a5eec78c/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
+github.com/hyphacoop/cbor/v2 v2.0.0-20250814151930-9f6c6c41b21f h1:WqaKF64B/iNOPAcYQAr2cIyoBvO6h207cbQJiCAtKec=
+github.com/hyphacoop/cbor/v2 v2.0.0-20250814151930-9f6c6c41b21f/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
 github.com/ipfs/go-cid v0.5.0 h1:goEKKhaGm0ul11IHA7I6p1GmKz8kEYniqFopaB5Otwg=
 github.com/ipfs/go-cid v0.5.0/go.mod h1:0L7vmeNXpQpUS9vt+yEARkJ8rOg43DF3iPgn4GIN0mk=
 github.com/klauspost/cpuid/v2 v2.0.4/go.mod h1:FInQzS24/EEf25PyTYn52gqo7WaD8xa0213Md/qVLRg=

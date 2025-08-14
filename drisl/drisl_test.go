@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -148,6 +149,10 @@ var marshalTests = []struct {
 	{"small negative big.Int", big.NewInt(-1), "20"},
 	{"float32", float32(1.5), "fb3ff8000000000000"},
 	{"reduceable int32", int32(1), "01"},
+	{"cid tag", cbor.Tag{
+		Number:  drisl.CidTagNumber,
+		Content: hexDecode("00015512205891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03")},
+		"d82a582500015512205891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"},
 }
 
 // TestMarshal tests encoding Go objects with more versatility than the DASL test suite.
@@ -246,10 +251,33 @@ func TestCborTagUnmarshal(t *testing.T) {
 	}
 }
 
+func TestCborTagMarshal(t *testing.T) {
+	v := cbor.Tag{
+		Number:  1,
+		Content: 1363896240,
+	}
+	b, err := drisl.Marshal(&v)
+	if err == nil {
+		t.Errorf(`Marshal = %x, %v, want error`, b, err)
+		return
+	}
+	t.Log(err)
+}
+
 func TestCidUnmarshal(t *testing.T) {
 	var v drisl.Cid
 	if err := drisl.Unmarshal(hexDecode("d82a582500015512205891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"), &v); err != nil {
 		t.Errorf("Unmarshal(cid) into Cid: got error: %v", err)
+	}
+}
+
+func TestCidUnmarshalAny(t *testing.T) {
+	var v any
+	if err := drisl.Unmarshal(hexDecode("d82a582500015512205891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"), &v); err != nil {
+		t.Errorf("Unmarshal(cid) into any: got error: %v", err)
+	}
+	if reflect.TypeOf(v) != reflect.TypeOf(drisl.Cid{}) {
+		t.Errorf("Unmarshal(cid) into any: got type %s", reflect.TypeOf(v).String())
 	}
 }
 
@@ -314,6 +342,45 @@ func TestInvalidCidUnmarshal(t *testing.T) {
 	err := drisl.Unmarshal(hexDecode("d82a623030"), &v)
 	if err == nil {
 		t.Errorf("Unmarshal(bad Cid) = %v, wanted error", v)
+		return
+	}
+	t.Log(err)
+}
+
+type invalidMarshaler struct{ v []byte }
+
+func (im invalidMarshaler) MarshalCBOR() ([]byte, error) {
+	return im.v, nil
+}
+
+var marshalerTests = []struct {
+	name string
+	in   []byte
+}{
+	{"float32", hexDecode("fa3fc00000")},
+	{"map with int key", hexDecode("a10101")},
+	{"banned tag", hexDecode("c11a514b67b0")},
+}
+
+func TestInvalidMarshaler(t *testing.T) {
+	for _, tt := range marshalerTests {
+		t.Run(tt.name, func(t *testing.T) {
+			im := invalidMarshaler{tt.in}
+			b, err := drisl.Marshal(&im)
+			if err == nil {
+				t.Errorf(`%x - want error`, b)
+				return
+			}
+			t.Log(err)
+		})
+	}
+}
+
+func TestRawTagMarshal(t *testing.T) {
+	v := cbor.RawTag{Number: 123, Content: []byte{0x00}}
+	b, err := drisl.Marshal(&v)
+	if err == nil {
+		t.Errorf(`Marshal = %x, %v, want error`, b, err)
 		return
 	}
 	t.Log(err)

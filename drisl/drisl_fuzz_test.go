@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"math"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hyphacoop/go-dasl/drisl"
@@ -40,6 +41,54 @@ func FuzzUnmarshal(f *testing.F) {
 			}
 		}
 	})
+}
+
+type marshaler struct{ val []byte }
+
+func (m marshaler) MarshalCBOR() ([]byte, error) {
+	return m.val, nil
+}
+
+// FuzzMarshaler tests that cbor.Marshaler won't be accepted by drisl.Marshal unless it
+// outputs valid DRISL.
+func FuzzMarshaler(f *testing.F) {
+	for _, seed := range seeds {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, val []byte) {
+		b, err := drisl.Marshal(marshaler{val})
+		var v any
+		if err == nil {
+			err = drisl.Unmarshal(b, &v)
+			if err != nil && validMarshalerError(err) {
+				t.Errorf("Marshal produced invalid DRISL: %x -> %x -> %v", val, b, err)
+			} else if !bytes.Equal(b, val) {
+				t.Errorf("Marshal changed input: %x -> %x", val, b)
+			}
+		}
+	})
+}
+
+// validMarshalerError checks whether the error from unmarshalling a Marshaler's output is worth raising.
+// Some errors are not worth chasing down right now.
+func validMarshalerError(err error) bool {
+	if err.Error() == "cbor: invalid UTF-8 string" {
+		return false
+	}
+	// CID errors are also allowed for now since it would be difficult to validate.
+	// https://github.com/hyphacoop/go-dasl/issues/9
+	if strings.HasPrefix(err.Error(), "invalid cid:") {
+		return false
+	}
+	// Marshaler is allowed to output things that are too large for the default unmarshaller
+	if strings.HasPrefix(err.Error(), "cbor: exceeded max") {
+		return false
+	}
+	// Not worth checking for now, it's unlikely a good Marshaler would do this
+	if strings.HasPrefix(err.Error(), "cbor: found duplicate map key") {
+		return false
+	}
+	return true
 }
 
 func treeGenerator() *rapid.Generator[map[string]any] {

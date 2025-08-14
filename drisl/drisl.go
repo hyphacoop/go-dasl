@@ -125,5 +125,6 @@ func (opts EncOptions) EncMode() (EncMode, error) {
 		SimpleValues:     svr,
 		Float64Only:      true,
 		DisableKeyAsInt:  true,
+		TagsMd:           cbor.TagsLimited,
 	}.EncModeWithSharedTags(cborTags)
 }
