@@ -23,7 +23,31 @@ type Cid struct {
 	cid.Cid
 }
 
-func (c Cid) IsDASL() bool {
+func NewCidFromBytes(b []byte) (Cid, error) {
+	c, err := cid.Cast(b)
+	if err != nil {
+		return Cid{}, err
+	}
+	dc := Cid{c}
+	if !dc.isDASl() {
+		return Cid{}, &ForbiddenCidError{dc}
+	}
+	return dc, nil
+}
+
+func NewCidFromString(s string) (Cid, error) {
+	c, err := cid.Decode(s)
+	if err != nil {
+		return Cid{}, err
+	}
+	dc := Cid{c}
+	if !dc.isDASl() {
+		return Cid{}, &ForbiddenCidError{dc}
+	}
+	return dc, nil
+}
+
+func (c Cid) isDASl() bool {
 	// https://dasl.ing/cid.html
 	// https://dasl.ing/bdasl.html
 
@@ -44,7 +68,7 @@ func (c Cid) IsDASL() bool {
 }
 
 func (c Cid) MarshalCBOR() ([]byte, error) {
-	if !c.IsDASL() {
+	if !c.isDASl() {
 		return nil, &ForbiddenCidError{c}
 	}
 
@@ -87,7 +111,7 @@ func (c *Cid) UnmarshalCBOR(b []byte) error {
 	}
 	*c = Cid{parsed}
 
-	if !c.IsDASL() {
+	if !c.isDASl() {
 		return &ForbiddenCidError{*c}
 	}
 

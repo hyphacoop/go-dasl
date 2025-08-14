@@ -3,8 +3,7 @@ package drisl_test
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
-	"math"
+	"math/big"
 	"os"
 	"reflect"
 	"strings"
@@ -24,7 +23,6 @@ func seeds() [][]byte {
 	for i, hs := range hexSeeds {
 		seeds[i] = make([]byte, hex.DecodedLen(len(hs)))
 		hex.Decode(seeds[i], hs)
-		fmt.Println(hex.EncodeToString(seeds[i]))
 	}
 	return seeds
 }
@@ -115,6 +113,15 @@ func treeGenerator() *rapid.Generator[map[string]any] {
 		rapid.Uint64().AsAny(),
 		rapid.Uint().AsAny(),
 		rapid.Rune().AsAny(),
+		rapid.Custom(func(t *rapid.T) drisl.Cid {
+			c, err := drisl.NewCidFromBytes(rapid.SliceOf(rapid.Byte()).Draw(t, "cid"))
+			if err != nil {
+				return drisl.Cid{}
+			}
+			return c
+		}).Filter(func(c drisl.Cid) bool {
+			return c != drisl.Cid{}
+		}).AsAny(),
 	}
 	generators := []*rapid.Generator[any]{}
 	for _, terminator := range terminatorGens {
@@ -220,31 +227,25 @@ func isFloat(v reflect.Value) bool {
 
 func integerEqual(a, b reflect.Value) bool {
 	// Convert both to int64 for comparison, handling signed/unsigned conversions
-	aInt, aOk := toInt64(a)
-	bInt, bOk := toInt64(b)
-
+	aInt, aOk := toInt(a)
+	bInt, bOk := toInt(b)
 	if !aOk || !bOk {
 		return false
 	}
-
-	return aInt == bInt
+	return aInt.Cmp(bInt) == 0
 }
 
 func floatEqual(a, b reflect.Value) bool {
 	return a.Float() == b.Float()
 }
 
-func toInt64(v reflect.Value) (int64, bool) {
+func toInt(v reflect.Value) (*big.Int, bool) {
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int(), true
+		return big.NewInt(v.Int()), true
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		// Handle potential overflow when converting uint to int64
-		uval := v.Uint()
-		if uval <= math.MaxInt64 {
-			return int64(uval), true
-		}
-		return 0, false
+		var i big.Int
+		return i.SetUint64(v.Uint()), true
 	}
-	return 0, false
+	return nil, false
 }
