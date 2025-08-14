@@ -2,7 +2,10 @@ package drisl_test
 
 import (
 	"bytes"
+	"encoding/hex"
+	"fmt"
 	"math"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -11,22 +14,23 @@ import (
 	"pgregory.net/rapid"
 )
 
-var seeds = [][]byte{
-	// from cid.json:
-	hexDecode("d82a582500015512205891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"), // Valid CID
-	hexDecode("d82a4100"), // Simple invalid CID
-	// from floats.json
-	hexDecode("fb3ff8000000000000"), // A valid float
-	hexDecode("fb7ff8000000000000"), // An invalid NaN
-	// from utf8.json
-	hexDecode("7873d8a7d984d986d8b561f09f94a5f09f918bf09f8fbc5acda7cc91cc93cca4cd9461cc88cc88cc87cd96ccad6ccdaecc92cdab67cc8ccc9acc97cd9a6fcc94cdaecc87cd90cc87cc99f09fa79fe2808de29980efb88fe2808d20f09f8fb3efb88fe2808de29aa7efb88fe794b0e2808b20e2808b"), // Bunch of UTF-8 characters
-	hexDecode("62c328"), // Invalid utf-8
-	// A fully invalid string
-	[]byte("She sells seashells by the sea shore"),
+func seeds() [][]byte {
+	b, err := os.ReadFile("testdata/fuzz/cbor_seeds")
+	if err != nil {
+		panic(err)
+	}
+	hexSeeds := bytes.Split(b, []byte("\n"))
+	seeds := make([][]byte, len(hexSeeds))
+	for i, hs := range hexSeeds {
+		seeds[i] = make([]byte, hex.DecodedLen(len(hs)))
+		hex.Decode(seeds[i], hs)
+		fmt.Println(hex.EncodeToString(seeds[i]))
+	}
+	return seeds
 }
 
 func FuzzUnmarshal(f *testing.F) {
-	for _, seed := range seeds {
+	for _, seed := range seeds() {
 		f.Add(seed)
 	}
 	f.Fuzz(func(t *testing.T, val []byte) {
@@ -52,7 +56,7 @@ func (m marshaler) MarshalCBOR() ([]byte, error) {
 // FuzzMarshaler tests that cbor.Marshaler won't be accepted by drisl.Marshal unless it
 // outputs valid DRISL.
 func FuzzMarshaler(f *testing.F) {
-	for _, seed := range seeds {
+	for _, seed := range seeds() {
 		f.Add(seed)
 	}
 	f.Fuzz(func(t *testing.T, val []byte) {
@@ -72,6 +76,7 @@ func FuzzMarshaler(f *testing.F) {
 // validMarshalerError checks whether the error from unmarshalling a Marshaler's output is worth raising.
 // Some errors are not worth chasing down right now.
 func validMarshalerError(err error) bool {
+	// Invalid UTF-8 is allowed since it is still wellformed CBOR and DRISL
 	if err.Error() == "cbor: invalid UTF-8 string" {
 		return false
 	}
@@ -80,7 +85,8 @@ func validMarshalerError(err error) bool {
 	if strings.HasPrefix(err.Error(), "invalid cid:") {
 		return false
 	}
-	// Marshaler is allowed to output things that are too large for the default unmarshaller
+	// Marshaler is allowed to output things that are too large for the default unmarshaller.
+	// That's not invalid by any spec.
 	if strings.HasPrefix(err.Error(), "cbor: exceeded max") {
 		return false
 	}
@@ -94,9 +100,21 @@ func validMarshalerError(err error) bool {
 func treeGenerator() *rapid.Generator[map[string]any] {
 	terminatorGens := []*rapid.Generator[any]{
 		rapid.Bool().AsAny(),
-		rapid.Float64().AsAny(),
-		rapid.Int64().AsAny(),
 		rapid.String().AsAny(),
+		rapid.Float64().AsAny(),
+		rapid.Float32().AsAny(),
+		rapid.Byte().AsAny(),
+		rapid.Int8().AsAny(),
+		rapid.Int16().AsAny(),
+		rapid.Int32().AsAny(),
+		rapid.Int64().AsAny(),
+		rapid.Int().AsAny(),
+		rapid.Uint8().AsAny(),
+		rapid.Uint16().AsAny(),
+		rapid.Uint32().AsAny(),
+		rapid.Uint64().AsAny(),
+		rapid.Uint().AsAny(),
+		rapid.Rune().AsAny(),
 	}
 	generators := []*rapid.Generator[any]{}
 	for _, terminator := range terminatorGens {
@@ -132,7 +150,7 @@ func FuzzMarshal(f *testing.F) {
 	}))
 }
 
-// deepEqualWithNumericConversion compares two values with special handling for integer types
+// deepEqualWithNumericConversion compares two values with special handling for integer/float types
 func deepEqualWithNumericConversion(a, b any) bool {
 	if a == nil && b == nil {
 		return true
@@ -143,9 +161,13 @@ func deepEqualWithNumericConversion(a, b any) bool {
 
 	va, vb := reflect.ValueOf(a), reflect.ValueOf(b)
 
-	// Handle integer conversions (but leave floats alone)
+	// Handle integer conversions
 	if isInteger(va) && isInteger(vb) {
 		return integerEqual(va, vb)
+	}
+	// Floats
+	if isFloat(va) && isFloat(vb) {
+		return floatEqual(va, vb)
 	}
 
 	// Handle slices recursively
@@ -179,7 +201,7 @@ func deepEqualWithNumericConversion(a, b any) bool {
 		return true
 	}
 
-	// For all other types (including floats), use standard reflection comparison
+	// For all other types use standard reflection comparison
 	return reflect.DeepEqual(a, b)
 }
 
@@ -192,6 +214,10 @@ func isInteger(v reflect.Value) bool {
 	return false
 }
 
+func isFloat(v reflect.Value) bool {
+	return v.Kind() == reflect.Float32 || v.Kind() == reflect.Float64
+}
+
 func integerEqual(a, b reflect.Value) bool {
 	// Convert both to int64 for comparison, handling signed/unsigned conversions
 	aInt, aOk := toInt64(a)
@@ -202,6 +228,10 @@ func integerEqual(a, b reflect.Value) bool {
 	}
 
 	return aInt == bInt
+}
+
+func floatEqual(a, b reflect.Value) bool {
+	return a.Float() == b.Float()
 }
 
 func toInt64(v reflect.Value) (int64, bool) {
