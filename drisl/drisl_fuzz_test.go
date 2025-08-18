@@ -95,6 +95,34 @@ func validMarshalerError(err error) bool {
 	return true
 }
 
+type unmarshaler struct {
+	t   *testing.T
+	val []byte
+}
+
+func (u *unmarshaler) UnmarshalCBOR([]byte) error {
+	u.t.Errorf("invalid data hit unmarshaler: %x", u.val)
+	return nil
+}
+
+func FuzzUnmarshaler(f *testing.F) {
+	for _, seed := range seeds() {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, val []byte) {
+		var v any
+		err := drisl.Unmarshal(val, &v)
+		if err == nil || !validMarshalerError(err) {
+			// Valid so ignore
+			return
+		}
+		u := unmarshaler{t, val}
+		drisl.Unmarshal(val, &u)
+		t.Logf("first unmarshal error: %v", err)
+		// If UnmarshalCBOR gets called the test will fail
+	})
+}
+
 func treeGenerator() *rapid.Generator[map[string]any] {
 	terminatorGens := []*rapid.Generator[any]{
 		rapid.Bool().AsAny(),

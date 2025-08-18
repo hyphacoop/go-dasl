@@ -48,5 +48,17 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: 'stable'
-      - name: Fuzz marshalling
+      - name: Fuzz marshaler
         run: go test -fuzz='^FuzzMarshaler$' -run='^FuzzMarshaler$' -fuzztime=5m ./...
+  fuzz4:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+      - name: Fuzz unmarshaler
+        run: go test -fuzz='^FuzzUnmarshaler$' -run='^FuzzUnmarshaler$' -fuzztime=5m ./...
