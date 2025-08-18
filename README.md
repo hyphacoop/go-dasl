@@ -4,6 +4,9 @@ A Go reference library for [DASL](https://dasl.ing).
 
 🚧 Not ready for production yet 🚧
 
+See an overview at [pkg.go.dev](https://pkg.go.dev/github.com/hyphacoop/go-dasl).
+In-depth documentation is coming.
+
 ## Submodules
 
 DASL has many specs, only some of which are implemented here.
