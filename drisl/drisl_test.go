@@ -177,6 +177,16 @@ func TestBigBigInt(t *testing.T) {
 	}
 }
 
+func TestMaxCborInt(t *testing.T) {
+	var i int64
+	err := drisl.Unmarshal(hexDecode("1b8000000000000000"), &i)
+	if err == nil {
+		t.Errorf("Unmarshal(2^63) into int64, got %d wanted error", i)
+		return
+	}
+	t.Log(err)
+}
+
 // TestFloat32UnmarshalSafe tests decoding a float64 into a float32 for a value that fits.
 func TestFloat32UnmarshalSafe(t *testing.T) {
 	var v float32

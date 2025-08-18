@@ -64,6 +64,10 @@ type DecOptions struct {
 	// MaxMapPairs specifies the max number of key-value pairs for CBOR maps.
 	// Default is 128*1024=131072 and it can be set to [16, 2147483647]
 	MaxMapPairs int
+
+	// Int64RangeOnly reduces the range of valid integers when decoding to the range
+	// supported by the int64 type: [-(2^63-1), 2^63-1].
+	Int64RangeOnly bool
 }
 
 // DecMode is the main interface for decoding.
@@ -97,12 +101,15 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 		MaxNestedLevels:    opts.MaxNestedLevels,
 		MaxArrayElements:   opts.MaxArrayElements,
 		MaxMapPairs:        opts.MaxMapPairs,
+		Int64RangeOnly:     opts.Int64RangeOnly,
 	}.DecModeWithSharedTags(cborTags)
 }
 
 // EncOptions specifies encoding options.
 type EncOptions struct {
-	// Nothing yet.
+	// Int64RangeOnly reduces the range of valid integers when encoding to the range
+	// supported by the int64 type: [-(2^63-1), 2^63-1]
+	Int64RangeOnly bool
 }
 
 // EncMode is the main interface for encoding.
@@ -126,6 +133,7 @@ func (opts EncOptions) EncMode() (EncMode, error) {
 		Float64Only:      true,
 		DisableKeyAsInt:  true,
 		TagsMd:           cbor.TagsLimited,
+		Int64RangeOnly:   opts.Int64RangeOnly,
 	}.EncModeWithSharedTags(cborTags)
 }
 
