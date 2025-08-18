@@ -38,3 +38,12 @@ func TestCidFromBytes(t *testing.T) {
 		t.Errorf("want %s, got %s", s, c.String())
 	}
 }
+
+func TestCidWithInvalidMultibase(t *testing.T) {
+	s := "zb2rhiMENf9e7DtGrsW46yLSw743GN1T6g7QFjUvXCxmvNnSr"
+	c, err := drisl.NewCidFromString(s)
+	if err == nil {
+		t.Errorf("invalid CID was parsed from string: %v", c)
+	}
+	t.Log(err)
+}

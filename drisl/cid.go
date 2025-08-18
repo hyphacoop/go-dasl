@@ -11,11 +11,11 @@ import (
 const CidTagNumber = 42
 
 type ForbiddenCidError struct {
-	c Cid
+	msgOrCid string
 }
 
 func (e *ForbiddenCidError) Error() string {
-	return fmt.Sprintf("invalid cid: does not conform to DASL CID specification: %s", e.c.String())
+	return fmt.Sprintf("invalid cid: does not conform to DASL CID specification: %s", e.msgOrCid)
 }
 
 // Cid is go-cid with CBOR marshalling support.
@@ -30,19 +30,25 @@ func NewCidFromBytes(b []byte) (Cid, error) {
 	}
 	dc := Cid{c}
 	if !dc.isDASl() {
-		return Cid{}, &ForbiddenCidError{dc}
+		return Cid{}, &ForbiddenCidError{dc.String()}
 	}
 	return dc, nil
 }
 
 func NewCidFromString(s string) (Cid, error) {
+	if len(s) == 0 {
+		return Cid{}, errors.New("empty string")
+	}
+	if s[0] != 'b' {
+		return Cid{}, &ForbiddenCidError{"must start with b prefix for base32: " + s}
+	}
 	c, err := cid.Decode(s)
 	if err != nil {
 		return Cid{}, err
 	}
 	dc := Cid{c}
 	if !dc.isDASl() {
-		return Cid{}, &ForbiddenCidError{dc}
+		return Cid{}, &ForbiddenCidError{dc.String()}
 	}
 	return dc, nil
 }
@@ -69,7 +75,7 @@ func (c Cid) isDASl() bool {
 
 func (c Cid) MarshalCBOR() ([]byte, error) {
 	if !c.isDASl() {
-		return nil, &ForbiddenCidError{c}
+		return nil, &ForbiddenCidError{c.String()}
 	}
 
 	// CID in CBOR is just CID bytes with 0x00 prepended
@@ -112,7 +118,7 @@ func (c *Cid) UnmarshalCBOR(b []byte) error {
 	*c = Cid{parsed}
 
 	if !c.isDASl() {
-		return &ForbiddenCidError{*c}
+		return &ForbiddenCidError{c.String()}
 	}
 
 	return nil
