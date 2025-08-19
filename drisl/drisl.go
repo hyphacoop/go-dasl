@@ -11,6 +11,7 @@ var (
 	drislEncMode EncMode
 	cborTags     cbor.TagSet
 	svr          *cbor.SimpleValueRegistry
+	svrUndefined *cbor.SimpleValueRegistry
 )
 
 func init() {
@@ -25,6 +26,7 @@ func init() {
 	}
 
 	svr = cbor.NewSimpleValueRegistryStrict()
+	svrUndefined = cbor.NewSimpleValueRegistryStrictUndefined()
 
 	drislDecMode, err = DecOptions{}.DecMode()
 	if err != nil {
@@ -68,6 +70,10 @@ type DecOptions struct {
 	// Int64RangeOnly reduces the range of valid integers when decoding to the range
 	// supported by the int64 type: [-(2^63), 2^63-1].
 	Int64RangeOnly bool
+
+	// AllowUndefined accepts CBOR's 'undefined' simple value when decoding, silently
+	// turning it into Go's nil.
+	AllowUndefined bool
 }
 
 // DecMode is the main interface for decoding.
@@ -81,13 +87,17 @@ type DecMode interface {
 }
 
 func (opts DecOptions) DecMode() (DecMode, error) {
+	thisSvr := svr
+	if opts.AllowUndefined {
+		thisSvr = svrUndefined
+	}
 	return cbor.DecOptions{
 		// Try to be strict
 		DupMapKey:          cbor.DupMapKeyEnforcedAPF,
 		IndefLength:        cbor.IndefLengthForbidden,
 		DefaultMapType:     reflect.TypeOf(map[string]any{}),
 		MapKeyByteString:   cbor.MapKeyByteStringForbidden,
-		SimpleValues:       svr,
+		SimpleValues:       thisSvr,
 		NaN:                cbor.NaNDecodeForbidden,
 		Inf:                cbor.InfDecodeForbidden,
 		BignumTag:          cbor.BignumTagForbidden,

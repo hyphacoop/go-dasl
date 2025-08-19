@@ -51,3 +51,12 @@ func TestIntRangeUnmarshal2(t *testing.T) {
 	}
 	t.Log(err)
 }
+
+func TestUndefinedUnmarshal(t *testing.T) {
+	dm, _ := drisl.DecOptions{AllowUndefined: true}.DecMode()
+	var v any
+	err := dm.Unmarshal([]byte{0xf7}, &v)
+	if err != nil || v != nil {
+		t.Errorf("got %v, %v - want error", v, err)
+	}
+}
