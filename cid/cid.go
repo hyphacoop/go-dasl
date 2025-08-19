@@ -242,7 +242,8 @@ func (c Cid) String() string {
 }
 
 // Equals returns true if the two CIDs are exactly the same.
-func (c Cid) Equals(o *Cid) bool {
+// CIDs with the same hash type and digest but different codecs are not considered equal.
+func (c Cid) Equals(o Cid) bool {
 	return bytes.Equal(c.b, o.b)
 }
 
