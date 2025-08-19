@@ -25,7 +25,7 @@ jobs:
         with:
           go-version: 'stable'
       - name: Fuzz unmarshalling
-        run: go test -fuzz='^FuzzUnmarshal$' -run='^FuzzUnmarshal$' -fuzztime=5m ./...
+        run: go test -fuzz='^FuzzUnmarshal$' -run='^FuzzUnmarshal$' -fuzztime=5m ./drisl
   fuzz2:
     runs-on: ubuntu-latest
     steps:
@@ -37,7 +37,7 @@ jobs:
         with:
           go-version: 'stable'
       - name: Fuzz marshalling
-        run: go test -fuzz='^FuzzMarshal$' -run='^FuzzMarshal$' -fuzztime=5m ./...
+        run: go test -fuzz='^FuzzMarshal$' -run='^FuzzMarshal$' -fuzztime=5m ./drisl
   fuzz3:
     runs-on: ubuntu-latest
     steps:
@@ -49,7 +49,7 @@ jobs:
         with:
           go-version: 'stable'
       - name: Fuzz marshaler
-        run: go test -fuzz='^FuzzMarshaler$' -run='^FuzzMarshaler$' -fuzztime=5m ./...
+        run: go test -fuzz='^FuzzMarshaler$' -run='^FuzzMarshaler$' -fuzztime=5m ./drisl
   fuzz4:
     runs-on: ubuntu-latest
     steps:
@@ -61,4 +61,4 @@ jobs:
         with:
           go-version: 'stable'
       - name: Fuzz unmarshaler
-        run: go test -fuzz='^FuzzUnmarshaler$' -run='^FuzzUnmarshaler$' -fuzztime=5m ./...
+        run: go test -fuzz='^FuzzUnmarshaler$' -run='^FuzzUnmarshaler$' -fuzztime=5m ./drisl
