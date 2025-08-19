@@ -66,7 +66,7 @@ type DecOptions struct {
 	MaxMapPairs int
 
 	// Int64RangeOnly reduces the range of valid integers when decoding to the range
-	// supported by the int64 type: [-(2^63-1), 2^63-1].
+	// supported by the int64 type: [-(2^63), 2^63-1].
 	Int64RangeOnly bool
 }
 
@@ -108,7 +108,7 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 // EncOptions specifies encoding options.
 type EncOptions struct {
 	// Int64RangeOnly reduces the range of valid integers when encoding to the range
-	// supported by the int64 type: [-(2^63-1), 2^63-1]
+	// supported by the int64 type: [-(2^63), 2^63-1]
 	Int64RangeOnly bool
 }
 
