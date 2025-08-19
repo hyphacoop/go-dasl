@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	"github.com/fxamacker/cbor/v2"
+	"github.com/hyphacoop/go-dasl/cid"
 )
 
 var (
@@ -14,11 +15,13 @@ var (
 	svrUndefined *cbor.SimpleValueRegistry
 )
 
+const CidTagNumber = 42
+
 func init() {
 	cborTags = cbor.NewTagSet()
 	err := cborTags.Add(
 		cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired},
-		reflect.TypeOf(Cid{}),
+		reflect.TypeOf(cid.Cid{}),
 		CidTagNumber,
 	)
 	if err != nil {

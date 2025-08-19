@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hyphacoop/go-dasl/cid"
 	"github.com/hyphacoop/go-dasl/drisl"
 	"pgregory.net/rapid"
 )
@@ -141,14 +142,14 @@ func treeGenerator() *rapid.Generator[map[string]any] {
 		rapid.Uint64().AsAny(),
 		rapid.Uint().AsAny(),
 		rapid.Rune().AsAny(),
-		rapid.Custom(func(t *rapid.T) drisl.Cid {
-			c, err := drisl.NewCidFromBytes(rapid.SliceOf(rapid.Byte()).Draw(t, "cid"))
+		rapid.Custom(func(t *rapid.T) cid.Cid {
+			c, err := cid.NewCidFromBytes(rapid.SliceOf(rapid.Byte()).Draw(t, "cid"))
 			if err != nil {
-				return drisl.Cid{}
+				return cid.Cid{}
 			}
 			return c
-		}).Filter(func(c drisl.Cid) bool {
-			return c != drisl.Cid{}
+		}).Filter(func(c cid.Cid) bool {
+			return c.Defined()
 		}).AsAny(),
 	}
 	generators := []*rapid.Generator[any]{}

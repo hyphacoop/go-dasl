@@ -12,7 +12,7 @@ In-depth documentation is coming.
 DASL has many specs, only some of which are implemented here.
 
 - DRISL (dag-cbor): implemented
-- CID: working, independent implementation is planned (including BDASL)
+- CID: implemented (including BDASL)
 - RASL: stretch goal
 - MASL: stretch goal
 - CAR: currently out of scope
@@ -23,7 +23,7 @@ This library follows [Semantic Versioning](https://semver.org/).
 
 - Pre-release versions (like x.y.z-alpha) are not intended to be used by the public
 - Zero versions (0.y.z) are ready to use, but may have breaking changes
-- 1.0.0 will be released once the DRISL spec has been finalized
+- 1.0.0 will be released once the DRISL and CID specs have been finalized
 
 ## Funding
 

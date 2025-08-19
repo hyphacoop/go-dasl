@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
+	"github.com/hyphacoop/go-dasl/cid"
 	"github.com/hyphacoop/go-dasl/drisl"
 )
 
@@ -275,7 +276,7 @@ func TestCborTagMarshal(t *testing.T) {
 }
 
 func TestCidUnmarshal(t *testing.T) {
-	var v drisl.Cid
+	var v cid.Cid
 	if err := drisl.Unmarshal(hexDecode("d82a582500015512205891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"), &v); err != nil {
 		t.Errorf("Unmarshal(cid) into Cid: got error: %v", err)
 	}
@@ -286,7 +287,7 @@ func TestCidUnmarshalAny(t *testing.T) {
 	if err := drisl.Unmarshal(hexDecode("d82a582500015512205891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"), &v); err != nil {
 		t.Errorf("Unmarshal(cid) into any: got error: %v", err)
 	}
-	if reflect.TypeOf(v) != reflect.TypeOf(drisl.Cid{}) {
+	if reflect.TypeOf(v) != reflect.TypeOf(cid.Cid{}) {
 		t.Errorf("Unmarshal(cid) into any: got type %s", reflect.TypeOf(v).String())
 	}
 }
@@ -391,6 +392,16 @@ func TestRawTagMarshal(t *testing.T) {
 	b, err := drisl.Marshal(&v)
 	if err == nil {
 		t.Errorf(`Marshal = %x, %v, want error`, b, err)
+		return
+	}
+	t.Log(err)
+}
+
+func TestCidNullUnmarshal(t *testing.T) {
+	var c cid.Cid
+	err := drisl.Unmarshal([]byte{0xf6}, &c)
+	if err == nil {
+		t.Errorf("Unmarshal null into Cid = %v - want error", c)
 		return
 	}
 	t.Log(err)
