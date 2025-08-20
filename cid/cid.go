@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/fxamacker/cbor/v2"
+	"github.com/hyphacoop/cbor/v2"
 	"github.com/multiformats/go-varint"
 )
 

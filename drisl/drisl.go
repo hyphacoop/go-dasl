@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"reflect"
 
-	"github.com/fxamacker/cbor/v2"
+	"github.com/hyphacoop/cbor/v2"
 	"github.com/hyphacoop/go-dasl/cid"
 )
 
