@@ -406,3 +406,13 @@ func TestCidNullUnmarshal(t *testing.T) {
 	}
 	t.Log(err)
 }
+
+func TestFloat64DetailedUnmarshal(t *testing.T) {
+	var v float64
+	// This float cannot be marshaled as a float32
+	// So this tests that the float32 checks are not being triggered for a float64 receiver.
+	err := drisl.Unmarshal(hexDecode("fbc010666666666666"), &v)
+	if err != nil {
+		t.Errorf("Unmarshal(-4.1) into float64 error: %v", err)
+	}
+}

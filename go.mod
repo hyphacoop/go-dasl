@@ -10,4 +10,4 @@ require (
 
 require github.com/x448/float16 v0.8.4 // indirect
 
-replace github.com/fxamacker/cbor/v2 => github.com/hyphacoop/cbor/v2 v2.0.0-20250819143809-93fce09ebc4d
+replace github.com/fxamacker/cbor/v2 => github.com/hyphacoop/cbor/v2 v2.0.0-20250820175754-6587bd559f7d
