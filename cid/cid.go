@@ -101,7 +101,7 @@ func NewCidFromBytes(in []byte) (Cid, error) {
 	return Cid{b}, nil
 }
 
-// NewCidFromReader reads out a new DASL CID from the given reader.
+// NewCidFromReader reads a binary DASL CID from the given reader.
 // A ForbiddenCidError is returned if it is invalid in any way.
 // Extra data after the CID is allowed.
 //
@@ -148,14 +148,14 @@ func NewCidFromReader(r io.Reader) (Cid, error) {
 	}
 	cid.b = append(cid.b, b)
 
-	hashSize, err := varint.ReadUvarint(br)
+	hashSize, bs, err := readUvarint(br)
 	if err != nil {
 		if err == io.ErrUnexpectedEOF {
 			return Cid{}, err
 		}
 		return Cid{}, &ForbiddenCidError{err.Error()}
 	}
-	cid.b = append(cid.b, b)
+	cid.b = append(cid.b, bs...)
 
 	digest := make([]byte, hashSize)
 	_, err = io.ReadFull(r, digest)
@@ -198,7 +198,7 @@ func NewCidFromInfo(codec Codec, hashType HashType, digest []byte) (Cid, error) 
 	b[1] = byte(codec)
 	b[2] = byte(hashType)
 
-	// Go slice size limits prevent this varint from being large than the max allowed by
+	// Go slice size limits prevent this varint from being larger than the max allowed by
 	// the IPFS unsigned-varint spec: https://github.com/multiformats/unsigned-varint
 	// So I can just add it and move on
 	b = binary.AppendUvarint(b, uint64(len(digest)))
@@ -338,4 +338,40 @@ func (c *Cid) UnmarshalCBOR(b []byte) error {
 	}
 	*c = parsed
 	return nil
+}
+
+// readUvarint reads a unsigned varint from the given reader.
+// Modified from go-varint v0.1.0 under MIT license.
+func readUvarint(r io.ByteReader) (uint64, []byte, error) {
+	// Modified from the go standard library. Copyright the Go Authors and
+	// released under the BSD License.
+	var x uint64
+	var s uint
+	bs := make([]byte, 0, 1)
+	for s = 0; ; s += 7 {
+		b, err := r.ReadByte()
+		if err != nil {
+			if err == io.EOF && s != 0 {
+				// "eof" will look like a success.
+				// If we've read part of a value, this is not a
+				// success.
+				err = io.ErrUnexpectedEOF
+			}
+			return 0, nil, err
+		}
+		bs = append(bs, b)
+		if (s == 56 && b >= 0x80) || s >= (7*varint.MaxLenUvarint63) {
+			// this is the 9th and last byte we're willing to read, but it
+			// signals there's more (1 in MSB).
+			// or this is the >= 10th byte, and for some reason we're still here.
+			return 0, nil, varint.ErrOverflow
+		}
+		if b < 0x80 {
+			if b == 0 && s > 0 {
+				return 0, nil, varint.ErrNotMinimal
+			}
+			return x | uint64(b)<<s, bs, nil
+		}
+		x |= uint64(b&0x7f) << s
+	}
 }

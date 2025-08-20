@@ -106,6 +106,7 @@ func (u *unmarshaler) UnmarshalCBOR([]byte) error {
 	return nil
 }
 
+// FuzzUnmarshaler tests that cbor.Unmarshaler won't be called for invalid DRISL.
 func FuzzUnmarshaler(f *testing.F) {
 	for _, seed := range seeds() {
 		f.Add(seed)

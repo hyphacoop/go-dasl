@@ -10,6 +10,21 @@ import (
 
 // More CID tests are in drisl_test.go
 
+var (
+	cidStr    = "bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4"
+	cidBytes  = hexDecode("01551220adee2e8fb5459c9bcf07d7d78d1183bf40a7f60f57a54a19194801c9a27ead87")
+	cidDigest = hexDecode("adee2e8fb5459c9bcf07d7d78d1183bf40a7f60f57a54a19194801c9a27ead87")
+	cidCid    = MustCid(cidStr)
+)
+
+func MustCid(s string) cid.Cid {
+	c, err := cid.NewCidFromString(s)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
 func hexDecode(s string) []byte {
 	b, err := hex.DecodeString(s)
 	if err != nil {
@@ -18,33 +33,29 @@ func hexDecode(s string) []byte {
 	return b
 }
 
-func TestCidFromString(t *testing.T) {
-	s := "bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4"
-	b := hexDecode("01551220adee2e8fb5459c9bcf07d7d78d1183bf40a7f60f57a54a19194801c9a27ead87")
-	c, err := cid.NewCidFromString(s)
+func TestNewCidFromString(t *testing.T) {
+	c, err := cid.NewCidFromString(cidStr)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	if c.String() != s {
-		t.Errorf("want %s, got %s", s, c.String())
+	if c.String() != cidStr {
+		t.Fatalf("want %s, got %s", cidStr, c.String())
 	}
-	if !bytes.Equal(c.Bytes(), b) {
-		t.Errorf("want %x, got %x", b, c.Bytes())
+	if !bytes.Equal(c.Bytes(), cidBytes) {
+		t.Fatalf("want %x, got %x", cidBytes, c.Bytes())
 	}
 }
 
-func TestCidFromBytes(t *testing.T) {
-	s := "bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4"
-	b := hexDecode("01551220adee2e8fb5459c9bcf07d7d78d1183bf40a7f60f57a54a19194801c9a27ead87")
-	c, err := cid.NewCidFromBytes(b)
+func TestNewCidFromBytes(t *testing.T) {
+	c, err := cid.NewCidFromBytes(cidBytes)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	if !bytes.Equal(c.Bytes(), b) {
-		t.Errorf("want %x, got %x", b, c.Bytes())
+	if !bytes.Equal(c.Bytes(), cidBytes) {
+		t.Fatalf("want %x, got %x", cidBytes, c.Bytes())
 	}
-	if c.String() != s {
-		t.Errorf("want %s, got %s", s, c.String())
+	if c.String() != cidStr {
+		t.Fatalf("want %s, got %s", cidStr, c.String())
 	}
 }
 
@@ -52,7 +63,40 @@ func TestCidWithInvalidMultibase(t *testing.T) {
 	s := "zb2rhiMENf9e7DtGrsW46yLSw743GN1T6g7QFjUvXCxmvNnSr"
 	c, err := cid.NewCidFromString(s)
 	if err == nil {
-		t.Errorf("invalid CID was parsed from string: %v", c)
+		t.Fatalf("invalid CID was parsed from string: %v", c)
 	}
 	t.Log(err)
+}
+
+func TestNewCidFromReader(t *testing.T) {
+	r := bytes.NewReader(append(cidBytes, []byte("foobar")...))
+	c, err := cid.NewCidFromReader(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(c.Bytes(), cidBytes) {
+		t.Fatalf("want %x, got %x", cidBytes, c.Bytes())
+	}
+}
+
+func TestNewCidFromInfo(t *testing.T) {
+	c, err := cid.NewCidFromInfo(cid.CodecRaw, cid.HashTypeSha256, cidDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(c.Bytes(), cidBytes) {
+		t.Fatalf("want %x, got %x", cidBytes, c.Bytes())
+	}
+}
+
+func TestHashSize(t *testing.T) {
+	if cidCid.HashSize() != 32 {
+		t.Errorf(".HashSize() = %d, want 32", cidCid.HashSize())
+	}
+}
+
+func TestDigest(t *testing.T) {
+	if !bytes.Equal(cidCid.Digest(), cidDigest) {
+		t.Errorf(".Digest() = %x, want %x", cidCid.Digest(), cidDigest)
+	}
 }
