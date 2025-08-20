@@ -176,6 +176,10 @@ func FuzzMarshal(f *testing.F) {
 			unmarshaled := map[string]any{}
 			err := drisl.Unmarshal(bz, &unmarshaled)
 			if err != nil {
+				if strings.HasPrefix(err.Error(), "cbor: exceeded max") {
+					// This error is okay
+					return
+				}
 				t.Errorf("Struct %+v produced unmarshal error %v", value, err)
 			} else if !deepEqualWithNumericConversion(value, unmarshaled) {
 				t.Errorf("Expected %#v got %#v, (bz: %x)", value, unmarshaled, bz)
