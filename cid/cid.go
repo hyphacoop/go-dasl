@@ -209,10 +209,9 @@ func NewCidFromInfo(codec Codec, hashType HashType, digest []byte) (Cid, error) 
 
 // HashBytes creates a raw SHA-256 CID by hashing the provided bytes.
 func HashBytes(b []byte) Cid {
-	hasher := sha256.New()
-	hasher.Write(b)
+	digest := sha256.Sum256(b)
 	// Quick version of NewCidFromInfo
-	return Cid{append([]byte{0x01, 0x55, 0x12, 0x20}, hasher.Sum(nil)...)}
+	return Cid{append([]byte{0x01, 0x55, 0x12, 0x20}, digest[:]...)}
 }
 
 // HashReader creates a raw SHA-256 CID by hashing all the data in the reader.

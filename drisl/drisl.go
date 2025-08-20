@@ -1,6 +1,7 @@
 package drisl
 
 import (
+	"crypto/sha256"
 	"reflect"
 
 	"github.com/fxamacker/cbor/v2"
@@ -167,4 +168,16 @@ type Marshaler interface {
 // should be used to decode it.
 type Unmarshaler interface {
 	UnmarshalCBOR([]byte) error
+}
+
+// CalculateCidForValue calculates the DRISL SHA-256 CID for the given Go value.
+// This is achieved by marshalling it into DRISL and then hashing those bytes.
+// An error is returned if the value could not be marshalled
+func CalculateCidForValue(v any) (cid.Cid, error) {
+	b, err := Marshal(v)
+	if err != nil {
+		return cid.Cid{}, err
+	}
+	digest := sha256.Sum256(b)
+	return cid.NewCidFromInfo(cid.CodecDrisl, cid.HashTypeSha256, digest[:])
 }
