@@ -207,6 +207,22 @@ func NewCidFromInfo(codec Codec, hashType HashType, digest []byte) (Cid, error) 
 	return Cid{b}, nil
 }
 
+func MustNewCidFromString(s string) Cid {
+	c, err := NewCidFromString(s)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
+func MustNewCidFromBytes(b []byte) Cid {
+	c, err := NewCidFromBytes(b)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
 // HashBytes creates a raw SHA-256 CID by hashing the provided bytes.
 func HashBytes(b []byte) Cid {
 	digest := sha256.Sum256(b)
