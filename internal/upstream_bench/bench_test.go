@@ -1,18 +1,83 @@
-// This benchmark is based on the upstream CBOR benchmark: https://github.com/fxamacker/cbor/blob/master/bench_test.go
-// The original is under an MIT License, Copyright (c) 2019-present Faye Amacker
-package drisl_test
+// This file is a copy of drisl_bench_test.go but using the upstream CBOR lib instead.
+// It configures the CBOR lib to match ours as closely as possible.
+package upstreambench
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/hyphacoop/go-dasl/cid"
-	"github.com/hyphacoop/go-dasl/drisl"
 )
+
+func hexDecode(s string) []byte {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+func decOptions() cbor.DecOptions {
+	return cbor.DecOptions{
+		DupMapKey:        cbor.DupMapKeyEnforcedAPF,
+		IndefLength:      cbor.IndefLengthForbidden,
+		DefaultMapType:   reflect.TypeOf(map[string]any{}),
+		MapKeyByteString: cbor.MapKeyByteStringForbidden,
+		NaN:              cbor.NaNDecodeForbidden,
+		Inf:              cbor.InfDecodeForbidden,
+		BignumTag:        cbor.BignumTagForbidden,
+		TagsMd:           cbor.TagsAllowed,
+	}
+}
+
+func decMode() cbor.DecMode {
+	cborTags := cbor.NewTagSet()
+	err := cborTags.Add(
+		cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired},
+		reflect.TypeOf(cid.Cid{}),
+		42,
+	)
+	if err != nil {
+		panic(err)
+	}
+	dm, err := decOptions().DecModeWithSharedTags(cborTags)
+	if err != nil {
+		panic(err)
+	}
+	return dm
+}
+func encMode() cbor.EncMode {
+	cborTags := cbor.NewTagSet()
+	err := cborTags.Add(
+		cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired},
+		reflect.TypeOf(cid.Cid{}),
+		42,
+	)
+	if err != nil {
+		panic(err)
+	}
+	dm, err := cbor.EncOptions{
+		Sort:          cbor.SortBytewiseLexical,
+		ShortestFloat: cbor.ShortestFloatNone,
+		NaNConvert:    cbor.NaNConvertReject,
+		InfConvert:    cbor.InfConvertReject,
+		BigIntConvert: cbor.BigIntConvertShortest,
+		Time:          cbor.TimeRFC3339Nano,
+		TimeTag:       cbor.EncTagNone,
+		IndefLength:   cbor.IndefLengthForbidden,
+		TagsMd:        cbor.TagsAllowed,
+	}.EncModeWithSharedTags(cborTags)
+	if err != nil {
+		panic(err)
+	}
+	return dm
+}
 
 type T1 struct {
 	T    bool
@@ -228,6 +293,7 @@ var encodeBenchmarks = []struct {
 }
 
 func BenchmarkUnmarshal(b *testing.B) {
+	dm := decMode()
 	for _, bm := range decodeBenchmarks {
 		for _, t := range bm.decodeToTypes {
 			name := "CBOR " + bm.name + " to Go " + t.String()
@@ -238,7 +304,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 				b.SetBytes(int64(len(bm.data)))
 				for b.Loop() {
 					vPtr := reflect.New(t).Interface()
-					if err := drisl.Unmarshal(bm.data, vPtr); err != nil {
+					if err := dm.Unmarshal(bm.data, vPtr); err != nil {
 						b.Fatal("Unmarshal:", err)
 					}
 				}
@@ -280,7 +346,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 			b.SetBytes(int64(len(bm.data)))
 			for b.Loop() {
 				vPtr := reflect.New(bm.decodeToType).Interface()
-				if err := drisl.Unmarshal(bm.data, vPtr); err != nil {
+				if err := dm.Unmarshal(bm.data, vPtr); err != nil {
 					b.Fatal("Unmarshal:", err)
 				}
 			}
@@ -289,6 +355,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 }
 
 func BenchmarkMarshal(b *testing.B) {
+	em := encMode()
 	for _, bm := range encodeBenchmarks {
 		for _, v := range bm.values {
 			name := "Go " + reflect.TypeOf(v).String() + " to CBOR " + bm.name
@@ -298,7 +365,7 @@ func BenchmarkMarshal(b *testing.B) {
 			b.Run(name, func(b *testing.B) {
 				b.SetBytes(int64(len(bm.data)))
 				for b.Loop() {
-					if _, err := drisl.Marshal(v); err != nil {
+					if _, err := em.Marshal(v); err != nil {
 						b.Fatal("Marshal:", err)
 					}
 				}
@@ -401,11 +468,11 @@ func BenchmarkMarshal(b *testing.B) {
 	}
 	for _, bm := range moreBenchmarks {
 		b.Run(bm.name, func(b *testing.B) {
-			bz, _ := drisl.Marshal(bm.value)
+			bz, _ := em.Marshal(bm.value)
 			b.ResetTimer()
 			b.SetBytes(int64(len(bz)))
 			for b.Loop() {
-				if _, err := drisl.Marshal(bm.value); err != nil {
+				if _, err := em.Marshal(bm.value); err != nil {
 					b.Fatal("Marshal:", err)
 				}
 			}
@@ -462,12 +529,12 @@ func BenchmarkUnmarshalMapToStruct(b *testing.B) {
 
 	for _, tc := range []*struct {
 		name   string
-		opts   drisl.DecOptions
+		opts   cbor.DecOptions
 		inputs []input
 	}{
 		{
 			name: "default options",
-			opts: drisl.DecOptions{},
+			opts: decOptions(),
 			inputs: []input{
 				{
 					name:   "all known fields",
