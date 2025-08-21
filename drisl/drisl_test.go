@@ -73,6 +73,14 @@ func runTests(t *testing.T, tests []*daslTestCase) {
 		panic(err)
 	}
 
+	// Pass datetime test
+	enc, err := drisl.EncOptions{
+		Time: drisl.TimeModeReject,
+	}.EncMode()
+	if err != nil {
+		panic(err)
+	}
+
 	for _, test := range tests {
 		isRelevantTest := slices.ContainsFunc(test.Tags, func(tag string) bool {
 			return tag == "basic" || tag == "dag-cbor" || tag == "dasl-cid"
@@ -91,7 +99,7 @@ func runTests(t *testing.T, tests []*daslTestCase) {
 					t.Errorf("Unmarshal error: %v", err)
 					return
 				}
-				b, err := drisl.Marshal(v)
+				b, err := enc.Marshal(v)
 				if err != nil {
 					t.Errorf("Marshal error: %v", err)
 					return
@@ -126,7 +134,7 @@ func runTests(t *testing.T, tests []*daslTestCase) {
 					t.Errorf("cbor.Unmarshal failed unexpectedly: %v", err)
 					return
 				}
-				if _, err := drisl.Marshal(v); err == nil {
+				if _, err := enc.Marshal(v); err == nil {
 					t.Error("Marshal didn't raise an error")
 				}
 			})
@@ -154,6 +162,7 @@ var marshalTests = []struct {
 		Number:  drisl.CidTagNumber,
 		Content: hexDecode("00015512205891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03")},
 		"d82a582500015512205891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"},
+	{"time.Time", time.Unix(0, 0).UTC(), "74313937302d30312d30315430303a30303a30305a"},
 }
 
 // TestMarshal tests encoding Go objects with more versatility than the DASL test suite.
@@ -244,14 +253,6 @@ func TestTimeStringUnmarshal(t *testing.T) {
 	var v any
 	if err := drisl.Unmarshal(hexDecode("c07819323032352d30352d32365431363a31383a31372d30343a3030"), &v); err == nil {
 		t.Errorf("Unmarshal(time tag) = %v, wanted error", v)
-	}
-}
-
-func TestTimeStringMarshal(t *testing.T) {
-	v := time.Now()
-	b, err := drisl.Marshal(v)
-	if err == nil {
-		t.Errorf(`Marshal(time.Time) = %x, %v, want error`, b, err)
 	}
 }
 
