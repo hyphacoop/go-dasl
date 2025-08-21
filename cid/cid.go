@@ -207,6 +207,7 @@ func NewCidFromInfo(codec Codec, hashType HashType, digest []byte) (Cid, error) 
 	return Cid{b}, nil
 }
 
+// MustNewCidFromString calls NewCidFromString and panics if it returns an error.
 func MustNewCidFromString(s string) Cid {
 	c, err := NewCidFromString(s)
 	if err != nil {
@@ -215,6 +216,7 @@ func MustNewCidFromString(s string) Cid {
 	return c
 }
 
+// MustNewCidFromBytes calls NewCidFromBytes and panics if it returns an error.
 func MustNewCidFromBytes(b []byte) Cid {
 	c, err := NewCidFromBytes(b)
 	if err != nil {
@@ -257,7 +259,11 @@ func (c Cid) String() string {
 }
 
 // Equals returns true if the two CIDs are exactly the same.
+//
 // CIDs with the same hash type and digest but different codecs are not considered equal.
+//
+// This is equivalent to comparing the .Bytes() or .String() output of two CIDs,
+// but more efficient.
 func (c Cid) Equals(o Cid) bool {
 	return bytes.Equal(c.b, o.b)
 }

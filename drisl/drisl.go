@@ -307,7 +307,7 @@ type Unmarshaler interface {
 
 // CalculateCidForValue calculates the DRISL SHA-256 CID for the given Go value.
 // This is achieved by marshalling it into DRISL and then hashing those bytes.
-// An error is returned if the value could not be marshalled
+// An error is returned if the value could not be marshalled.
 func CalculateCidForValue(v any) (cid.Cid, error) {
 	b, err := Marshal(v)
 	if err != nil {
