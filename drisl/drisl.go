@@ -239,6 +239,9 @@ type DecOptions struct {
 	// not be validated as strict DASL CIDs. This can be useful if you are decoding
 	// a document from the IPFS ecosystem, for example.
 	UseRawCid bool
+
+	// NoFloats disallows floats entirely.
+	NoFloats bool
 }
 
 // DecMode is the main interface for decoding.
@@ -278,6 +281,7 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 		MaxArrayElements:   opts.MaxArrayElements,
 		MaxMapPairs:        opts.MaxMapPairs,
 		Int64RangeOnly:     opts.Int64RangeOnly,
+		NoFloats:           opts.NoFloats,
 	}
 	if opts.UseRawCid {
 		return do.DecModeWithSharedTags(rawCidTag)
@@ -361,6 +365,9 @@ type EncOptions struct {
 	// Int64RangeOnly reduces the range of valid integers when encoding to the range
 	// supported by the int64 type: [-(2^63), 2^63-1]
 	Int64RangeOnly bool
+
+	// NoFloats disallows floats entirely.
+	NoFloats bool
 }
 
 // EncMode is the main interface for encoding.
@@ -386,6 +393,7 @@ func (opts EncOptions) EncMode() (EncMode, error) {
 		DisableKeyAsInt:  true,
 		TagsMd:           cbor.TagsLimited,
 		Int64RangeOnly:   opts.Int64RangeOnly,
+		NoFloats:         opts.NoFloats,
 		// I think this is more intuitive
 		OmitEmpty: cbor.OmitEmptyGoValue,
 	}.EncModeWithSharedTags(cidTag)

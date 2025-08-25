@@ -470,3 +470,22 @@ func TestRawCidMarshal(t *testing.T) {
 		t.Fatalf("got %x want %x", b, cborCid)
 	}
 }
+
+func TestNoFloatsMarshal(t *testing.T) {
+	var i float64 = 123.321
+	enc, _ := drisl.EncOptions{NoFloats: true}.EncMode()
+	b, err := enc.Marshal(i)
+	if err == nil {
+		t.Fatalf("want error, got %x", b)
+	}
+	t.Log(err)
+}
+
+func TestNoFloatsUnmarshal(t *testing.T) {
+	var v any
+	dec, _ := drisl.DecOptions{NoFloats: true}.DecMode()
+	err := dec.Unmarshal(hexDecode("fb3ff8000000000000"), &v)
+	if err == nil {
+		t.Fatalf("want error")
+	}
+}
