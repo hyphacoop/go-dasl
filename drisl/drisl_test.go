@@ -445,3 +445,28 @@ func TestRawMessageValidMarshal(t *testing.T) {
 		t.Fatalf("Marshal(RawMessage(valid)) got error: %v", err)
 	}
 }
+
+func TestRawCidUnmarshal(t *testing.T) {
+	var v any
+	dm, _ := drisl.DecOptions{UseRawCid: true}.DecMode()
+	err := dm.Unmarshal(hexDecode("d82a582300122022ad631c69ee983095b5b8acd029ff94aff1dc6c48837878589a92b90dfea317"), &v)
+	if err != nil {
+		t.Fatalf("Unmarshal(RawCid) failed: %v", err)
+	}
+	cidBytes := hexDecode("122022ad631c69ee983095b5b8acd029ff94aff1dc6c48837878589a92b90dfea317")
+	if !bytes.Equal(v.(cid.RawCid), cidBytes) {
+		t.Fatalf("got %x want %x", v, cidBytes)
+	}
+}
+
+func TestRawCidMarshal(t *testing.T) {
+	rc := cid.RawCid(hexDecode("122022ad631c69ee983095b5b8acd029ff94aff1dc6c48837878589a92b90dfea317"))
+	b, err := drisl.Marshal(rc)
+	if err != nil {
+		t.Fatalf("Marshal(RawCid) failed: %v", err)
+	}
+	cborCid := hexDecode("d82a582300122022ad631c69ee983095b5b8acd029ff94aff1dc6c48837878589a92b90dfea317")
+	if !bytes.Equal(b, cborCid) {
+		t.Fatalf("got %x want %x", b, cborCid)
+	}
+}

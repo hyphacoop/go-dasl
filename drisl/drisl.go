@@ -16,7 +16,8 @@ import (
 var (
 	drislDecMode DecMode
 	drislEncMode EncMode
-	cborTags     cbor.TagSet
+	cidTag       cbor.TagSet
+	rawCidTag    cbor.TagSet
 	svr          *cbor.SimpleValueRegistry
 	svrUndefined *cbor.SimpleValueRegistry
 )
@@ -25,10 +26,20 @@ var (
 const CidTagNumber = 42
 
 func init() {
-	cborTags = cbor.NewTagSet()
-	err := cborTags.Add(
+	cidTag = cbor.NewTagSet()
+	err := cidTag.Add(
 		cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired},
 		reflect.TypeOf(cid.Cid{}),
+		CidTagNumber,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	rawCidTag = cbor.NewTagSet()
+	err = rawCidTag.Add(
+		cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired},
+		reflect.TypeOf(cid.RawCid{}),
 		CidTagNumber,
 	)
 	if err != nil {
@@ -223,6 +234,11 @@ type DecOptions struct {
 	// AllowUndefined accepts CBOR's 'undefined' simple value when decoding, silently
 	// turning it into Go's nil.
 	AllowUndefined bool
+
+	// UseRawCid decodes CIDs into cid.RawCid instead of cid.Cid. This means CIDs will
+	// not be validated as strict DASL CIDs. This can be useful if you are decoding
+	// a document from the IPFS ecosystem, for example.
+	UseRawCid bool
 }
 
 // DecMode is the main interface for decoding.
@@ -241,7 +257,7 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 	if opts.AllowUndefined {
 		thisSvr = svrUndefined
 	}
-	return cbor.DecOptions{
+	do := cbor.DecOptions{
 		// All these options combine to form valid DRISL decoding.
 		DupMapKey:          cbor.DupMapKeyEnforcedAPF,
 		IndefLength:        cbor.IndefLengthForbidden,
@@ -262,7 +278,11 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 		MaxArrayElements:   opts.MaxArrayElements,
 		MaxMapPairs:        opts.MaxMapPairs,
 		Int64RangeOnly:     opts.Int64RangeOnly,
-	}.DecModeWithSharedTags(cborTags)
+	}
+	if opts.UseRawCid {
+		return do.DecModeWithSharedTags(rawCidTag)
+	}
+	return do.DecModeWithSharedTags(cidTag)
 }
 
 // TimeMode specifies how to encode time.Time values
@@ -368,7 +388,7 @@ func (opts EncOptions) EncMode() (EncMode, error) {
 		Int64RangeOnly:   opts.Int64RangeOnly,
 		// I think this is more intuitive
 		OmitEmpty: cbor.OmitEmptyGoValue,
-	}.EncModeWithSharedTags(cborTags)
+	}.EncModeWithSharedTags(cidTag)
 }
 
 // Marshaler is the interface implemented by types that can marshal themselves
