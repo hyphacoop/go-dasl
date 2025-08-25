@@ -1,3 +1,8 @@
+/*
+Package cid is an implementation of Content Identifiers, specifically the restricted DASL subset of CIDs.
+
+https://dasl.ing/cid.html
+*/
 package cid
 
 import (
@@ -30,6 +35,9 @@ const (
 	CodecDrisl     Codec    = 0x71
 	HashTypeSha256 HashType = 0x12
 	HashTypeBlake3 HashType = 0x1e
+
+	// The usual hash length
+	HashLength = 32
 )
 
 var (
@@ -233,7 +241,7 @@ func MustNewCidFromBytes(b []byte) Cid {
 func HashBytes(b []byte) Cid {
 	digest := sha256.Sum256(b)
 	// Quick version of NewCidFromInfo
-	return Cid{append([]byte{0x01, 0x55, 0x12, 0x20}, digest[:]...)}
+	return Cid{append([]byte{CidVersion, byte(CodecRaw), byte(HashTypeSha256), HashLength}, digest[:]...)}
 }
 
 // HashReader creates a raw SHA-256 CID by hashing all the data in the reader.
@@ -244,7 +252,7 @@ func HashReader(r io.Reader) (Cid, error) {
 		return Cid{}, err
 	}
 	// Quick version of NewCidFromInfo
-	return Cid{append([]byte{0x01, 0x55, 0x12, 0x20}, hasher.Sum(nil)...)}, nil
+	return Cid{append([]byte{CidVersion, byte(CodecRaw), byte(HashTypeSha256), HashLength}, hasher.Sum(nil)...)}, nil
 }
 
 // Bytes returns the CID in binary format.
