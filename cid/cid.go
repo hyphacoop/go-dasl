@@ -6,7 +6,6 @@ https://dasl.ing/cid.html
 package cid
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/base32"
@@ -113,12 +112,20 @@ func NewCidFromBytes(in []byte) (Cid, error) {
 	return Cid{b}, nil
 }
 
+type ReadByteReader interface {
+	io.Reader
+	io.ByteReader
+}
+
 // NewCidFromReader reads a binary DASL CID from the given reader.
 // A ForbiddenCidError is returned if it is invalid in any way.
 // Extra data after the CID is allowed.
 //
 // Note this is not the same as the bytes for a CID encoded in DRISL (CBOR).
-func NewCidFromReader(r io.Reader) (Cid, error) {
+//
+// If your reader does not support io.ByteReader, you can easily fulfill this
+// interface by wrapping it with bufio.NewReader.
+func NewCidFromReader(r ReadByteReader) (Cid, error) {
 	fixErr := func(e error) error {
 		if e == io.EOF {
 			return io.ErrUnexpectedEOF
@@ -126,14 +133,9 @@ func NewCidFromReader(r io.Reader) (Cid, error) {
 		return e
 	}
 
-	br, ok := r.(io.ByteReader)
-	if !ok {
-		br = bufio.NewReader(r)
-	}
-
 	cid := Cid{b: make([]byte, 0, minCidLength)}
 
-	b, err := br.ReadByte()
+	b, err := r.ReadByte()
 	if err != nil {
 		return Cid{}, fixErr(err)
 	}
@@ -142,7 +144,7 @@ func NewCidFromReader(r io.Reader) (Cid, error) {
 	}
 	cid.b = append(cid.b, b)
 
-	b, err = br.ReadByte()
+	b, err = r.ReadByte()
 	if err != nil {
 		return Cid{}, fixErr(err)
 	}
@@ -151,7 +153,7 @@ func NewCidFromReader(r io.Reader) (Cid, error) {
 	}
 	cid.b = append(cid.b, b)
 
-	b, err = br.ReadByte()
+	b, err = r.ReadByte()
 	if err != nil {
 		return Cid{}, fixErr(err)
 	}
@@ -160,7 +162,7 @@ func NewCidFromReader(r io.Reader) (Cid, error) {
 	}
 	cid.b = append(cid.b, b)
 
-	hashSize, bs, err := readUvarint(br)
+	hashSize, bs, err := readUvarint(r)
 	if err != nil {
 		if err == io.ErrUnexpectedEOF {
 			return Cid{}, err

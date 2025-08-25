@@ -1,8 +1,11 @@
 package cid_test
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/hex"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/hyphacoop/go-dasl/cid"
@@ -76,6 +79,32 @@ func TestNewCidFromReader(t *testing.T) {
 	}
 	if !bytes.Equal(c.Bytes(), cidBytes) {
 		t.Fatalf("want %x, got %x", cidBytes, c.Bytes())
+	}
+	if b, _ := r.ReadByte(); b != 'f' {
+		t.Fatalf("can't read later data")
+	}
+}
+
+func TestNewCidFromReader2(t *testing.T) {
+	f, err := os.Open("testdata/cid_file")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	br := bufio.NewReader(f)
+	c, err := cid.NewCidFromReader(br)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(c.Bytes(), cidBytes) {
+		t.Fatalf("want %x, got %x", cidBytes, c.Bytes())
+	}
+	trailer, err := io.ReadAll(br)
+	if err != nil {
+		t.Fatalf("can't read later data, got error: %v", err)
+	}
+	if !bytes.Equal(trailer, []byte("foobar")) {
+		t.Fatalf("trailing data: want %x got %x", []byte("foobar"), trailer)
 	}
 }
 
