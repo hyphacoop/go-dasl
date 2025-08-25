@@ -15,7 +15,10 @@ import (
 	"github.com/multiformats/go-varint"
 )
 
+// Codec is the encoding of the data represented by the CID.
 type Codec byte
+
+// HashType is the algorithm of the hash digest embedded in the CID.
 type HashType byte
 
 const (
@@ -49,6 +52,7 @@ func hexDecode(s string) []byte {
 	return b
 }
 
+// ForbiddenCidError is returned if the CID is invalid in some way according to the DRISL spec.
 type ForbiddenCidError struct {
 	msgOrCid string
 }
@@ -61,7 +65,7 @@ func (e *ForbiddenCidError) Error() string {
 // It is always valid, unless created directly such as cid.Cid{} or new(cid.Cid).
 // That will cause panics if methods are called upon it, unless otherwise documented.
 //
-//	https://dasl.ing/cid.html
+// https://dasl.ing/cid.html
 type Cid struct {
 	// b is the binary CID data
 	b []byte
@@ -327,6 +331,7 @@ func (c Cid) MarshalCBOR() ([]byte, error) {
 	})
 }
 
+// UnmarshalCBOR fulfills the drisl.Unmarshaler interface.
 func (c *Cid) UnmarshalCBOR(b []byte) error {
 	var tag cbor.Tag
 	if err := cbor.Unmarshal(b, &tag); err != nil {

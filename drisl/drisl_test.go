@@ -417,3 +417,14 @@ func TestFloat64DetailedUnmarshal(t *testing.T) {
 		t.Errorf("Unmarshal(-4.1) into float64 error: %v", err)
 	}
 }
+
+func TestTimeStringUnmarshalTime(t *testing.T) {
+	var v time.Time
+	err := drisl.Unmarshal(hexDecode("74313937302d30312d30315430303a30303a30305a"), &v)
+	if err != nil {
+		t.Fatalf("Unmarshal(time str) to Time - error: %v", err)
+	}
+	if !v.Equal(time.Unix(0, 0)) {
+		t.Fatalf("got %v want %v", v, time.Unix(0, 0).UTC())
+	}
+}

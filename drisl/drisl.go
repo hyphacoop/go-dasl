@@ -110,6 +110,82 @@ func Marshal(v any) ([]byte, error) {
 	return drislEncMode.Marshal(v)
 }
 
+// Unmarshal parses the DRISL-encoded data into the value pointed to by v
+// using default decoding options.  If v is nil, not a pointer, or
+// a nil pointer, Unmarshal returns an error.
+//
+// To unmarshal DRISL into a value implementing the Unmarshaler interface,
+// Unmarshal calls that value's UnmarshalCBOR method with a valid
+// CBOR value.
+//
+// To unmarshal CBOR byte string into a value implementing the
+// encoding.BinaryUnmarshaler interface, Unmarshal calls that value's
+// UnmarshalBinary method with decoded CBOR byte string.
+//
+// To unmarshal DRISL into a pointer, Unmarshal sets the pointer to nil
+// if data is null (0xf6).  Otherwise, Unmarshal
+// unmarshals into the value pointed to by the pointer.  If the
+// pointer is nil, Unmarshal creates a new value for it to point to.
+//
+// To unmarshal DRISL into an empty interface value, Unmarshal uses the
+// following rules:
+//
+//	CBOR booleans decode to bool.
+//	CBOR positive integers decode to uint64.
+//	CBOR negative integers decode to int64 (big.Int if value overflows).
+//	CBOR floating points decode to float64.
+//	CBOR byte strings decode to []byte.
+//	CBOR text strings decode to string.
+//	CBOR arrays decode to []interface{}.
+//	CBOR maps decode to map[interface{}]interface{}.
+//	CBOR null values decode to nil.
+//
+// To unmarshal a CBOR array into a slice, Unmarshal allocates a new slice
+// if the CBOR array is empty or slice capacity is less than CBOR array length.
+// Otherwise Unmarshal overwrites existing elements, and sets slice length
+// to CBOR array length.
+//
+// To unmarshal a CBOR array into a Go array, Unmarshal decodes CBOR array
+// elements into Go array elements.  If the Go array is smaller than the
+// CBOR array, the extra CBOR array elements are discarded.  If the CBOR
+// array is smaller than the Go array, the extra Go array elements are
+// set to zero values.
+//
+// To unmarshal a CBOR array into a struct, struct must have a special field "_"
+// with struct tag `cbor:",toarray"`.  Go array elements are decoded into struct
+// fields.  Any "omitempty" struct field tag option is ignored in this case.
+//
+// To unmarshal a CBOR map into a map, Unmarshal allocates a new map only if the
+// map is nil.  Otherwise Unmarshal reuses the existing map and keeps existing
+// entries.  Unmarshal stores key-value pairs from the CBOR map into Go map.
+// See DecOptions.DupMapKey to enable duplicate map key detection.
+//
+// To unmarshal a CBOR map into a struct, Unmarshal matches CBOR map keys to the
+// keys in the following priority:
+//
+//  1. "cbor" key in struct field tag,
+//  2. "json" key in struct field tag,
+//  3. struct field name.
+//
+// Unmarshal tries an exact match for field name, then a case-insensitive match.
+// Map key-value pairs without corresponding struct fields are ignored.  See
+// DecOptions.ExtraReturnErrors to return error at unknown field.
+//
+// To unmarshal a CBOR text string into a time.Time value, Unmarshal parses text
+// string formatted in RFC3339.  To unmarshal a CBOR integer/float into a
+// time.Time value, Unmarshal creates an unix time with integer/float as seconds
+// and fractional seconds since January 1, 1970 UTC. As a special case, Infinite
+// and NaN float values decode to time.Time's zero value.
+//
+// To unmarshal CBOR null (0xf6) values into a
+// slice/map/pointer, Unmarshal sets Go value to nil.  Because null is often
+// used to mean "not present", unmarshaling CBOR null value
+// into any other Go type has no effect and returns no error.
+//
+// Unmarshal returns ExtraneousDataError error (without decoding into v)
+// if there are any remaining bytes following the first valid CBOR data item.
+// See UnmarshalFirst, if you want to unmarshal only the first
+// CBOR data item without ExtraneousDataError caused by remaining bytes.
 func Unmarshal(data []byte, v any) error {
 	return drislDecMode.Unmarshal(data, v)
 }
@@ -154,13 +230,14 @@ type DecMode interface {
 	Unmarshal(data []byte, v any) error
 }
 
+// DecMode returns a DecMode to decode with the given options.
 func (opts DecOptions) DecMode() (DecMode, error) {
 	thisSvr := svr
 	if opts.AllowUndefined {
 		thisSvr = svrUndefined
 	}
 	return cbor.DecOptions{
-		// Try to be strict
+		// All these options combine to form valid DRISL decoding.
 		DupMapKey:          cbor.DupMapKeyEnforcedAPF,
 		IndefLength:        cbor.IndefLengthForbidden,
 		DefaultMapType:     reflect.TypeOf(map[string]any{}),
@@ -196,6 +273,8 @@ const (
 	// NOTE: User applications can avoid including the RFC3339 numeric offset by:
 	// - providing a time.Time value set to UTC, or
 	// - using the TimeUnix, TimeUnixMicro, or TimeUnixDynamic option instead of TimeRFC3339Nano.
+	//
+	// This is the default.
 	TimeRFC3339Nano TimeMode = iota
 
 	// TimeUnix causes time.Time to encode to a CBOR time (tag 1) with an integer content
@@ -228,7 +307,7 @@ const (
 	TimeModeReject
 )
 
-func (tm TimeMode) ToCborTimeMode() cbor.TimeMode {
+func (tm TimeMode) toCborTimeMode() cbor.TimeMode {
 	switch tm {
 	case TimeRFC3339Nano:
 		return cbor.TimeRFC3339Nano
@@ -264,15 +343,16 @@ type EncMode interface {
 	Marshal(v any) ([]byte, error)
 }
 
+// EncMode returns an EncMode to encode with the given options.
 func (opts EncOptions) EncMode() (EncMode, error) {
 	return cbor.EncOptions{
-		// Try to be strict
+		// All these options combine to form valid DRISL encoding.
 		Sort:             cbor.SortBytewiseLexical,
 		ShortestFloat:    cbor.ShortestFloatNone,
 		NaNConvert:       cbor.NaNConvertReject,
 		InfConvert:       cbor.InfConvertReject,
 		BigIntConvert:    cbor.BigIntConvertOnly,
-		Time:             opts.Time.ToCborTimeMode(),
+		Time:             opts.Time.toCborTimeMode(),
 		TimeTag:          cbor.EncTagNone,
 		IndefLength:      cbor.IndefLengthForbidden,
 		MapKeyStringOnly: true,
