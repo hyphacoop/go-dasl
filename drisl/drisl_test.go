@@ -428,3 +428,20 @@ func TestTimeStringUnmarshalTime(t *testing.T) {
 		t.Fatalf("got %v want %v", v, time.Unix(0, 0).UTC())
 	}
 }
+
+func TestRawMessageInvalidMarshal(t *testing.T) {
+	var rm drisl.RawMessage = hexDecode("a10101")
+	b, err := drisl.Marshal(rm)
+	if err == nil {
+		t.Fatalf("Marshal(RawMessage(invalid)) = %x - want error", b)
+	}
+	t.Log(err)
+}
+
+func TestRawMessageValidMarshal(t *testing.T) {
+	var rm drisl.RawMessage = []byte{0x00}
+	_, err := drisl.Marshal(rm)
+	if err != nil {
+		t.Fatalf("Marshal(RawMessage(valid)) got error: %v", err)
+	}
+}

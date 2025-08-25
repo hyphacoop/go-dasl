@@ -401,3 +401,9 @@ func CalculateCidForValue(v any) (cid.Cid, error) {
 	digest := sha256.Sum256(b)
 	return cid.NewCidFromInfo(cid.CodecDrisl, cid.HashTypeSha256, digest[:])
 }
+
+// RawMessage is a raw encoded DRISL value.
+//
+// Like json.RawMessage, the RawMessage type can be used to delay DRISL
+// decoding or precompute DRISL encoding.
+type RawMessage = cbor.RawMessage
