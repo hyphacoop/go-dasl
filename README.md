@@ -4,8 +4,66 @@ A Go reference library for [DASL](https://dasl.ing).
 
 🚧 Not ready for production yet 🚧
 
+## Usage
+
+```
+go get github.com/hyphacoop/go-dasl@latest
+```
+
+```go
+import (
+	"encoding/hex"
+	"fmt"
+	"time"
+
+	"github.com/hyphacoop/go-dasl/cid"
+	"github.com/hyphacoop/go-dasl/drisl"
+)
+
+type Data struct {
+    Name      string    `cbor:"name"`
+    Count     int       `cbor:"count"`
+    Timestamp time.Time `cbor:"timestamp"`
+    ID        cid.Cid   `cbor:"id"`
+    Ref       cid.Cid   `cbor:"ref"`
+}
+
+func main() {
+    // Create a CID for some data
+    id, _ := drisl.CalculateCidForValue(map[string]string{"hello": "world"})
+    ref, _ := cid.NewCidFromString("bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4")
+
+    data := Data{
+        Name:      "example",
+        Count:     42,
+        Timestamp: time.Date(2023, 6, 15, 14, 30, 45, 0, time.UTC),
+        ID:        id,
+        Ref:       ref,
+    }
+
+    bytes, err := drisl.Marshal(data)
+    if err != nil {
+        panic(err)
+    }
+
+    fmt.Printf("%x\n", bytes)
+}
+```
+
 See an overview at [pkg.go.dev](https://pkg.go.dev/github.com/hyphacoop/go-dasl).
-In-depth documentation is coming.
+
+### Smaller Encodings with Struct Tag Options
+
+Struct tags automatically reduce encoded size of structs and improve speed.
+
+We can write less code by using struct tag options:
+- `toarray`: encode without field names (decode back to original struct)
+- `omitempty`: omit empty field when encoding
+- `omitzero`: omit zero-value field when encoding
+
+As a special case, struct field tag "-" omits the field.
+
+NOTE: When a struct uses `toarray`, the encoder will ignore `omitempty` and `omitzero` to prevent position of encoded array elements from changing. This allows decoder to match encoded elements to their Go struct field.
 
 ## Submodules
 
