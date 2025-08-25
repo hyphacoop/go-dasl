@@ -11,8 +11,9 @@ go get github.com/hyphacoop/go-dasl@latest
 ```
 
 ```go
+package main
+
 import (
-	"encoding/hex"
 	"fmt"
 	"time"
 
