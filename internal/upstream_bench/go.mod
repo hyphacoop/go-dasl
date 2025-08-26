@@ -8,7 +8,7 @@ require (
 )
 
 require (
-	github.com/hyphacoop/cbor/v2 v2.0.0-20250820185646-e9efbb5f6280 // indirect
+	github.com/hyphacoop/cbor/v2 v2.0.0-20250825204513-587035952199 // indirect
 	github.com/multiformats/go-varint v0.1.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 )
