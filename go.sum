@@ -1,5 +1,5 @@
-github.com/hyphacoop/cbor/v2 v2.0.0-20250826161615-65eb042c0bba h1:ZTUS9MgvJid9AGMNQGgtX4CqklNwbq9DXFYn9sBkHuU=
-github.com/hyphacoop/cbor/v2 v2.0.0-20250826161615-65eb042c0bba/go.mod h1:1ny0WdocVllO4iUxV5eXuJ9vMzmZ2nITeZg7uBxVEeU=
+github.com/hyphacoop/cbor/v2 v2.0.0-20250826194546-3eeab82391b3 h1:3mChs5UwCI1Gn20f9l0tjralFZUR7yb7C21InNKhWAY=
+github.com/hyphacoop/cbor/v2 v2.0.0-20250826194546-3eeab82391b3/go.mod h1:1ny0WdocVllO4iUxV5eXuJ9vMzmZ2nITeZg7uBxVEeU=
 github.com/multiformats/go-varint v0.1.0 h1:i2wqFp4sdl3IcIxfAonHQV9qU5OsZ4Ts9IOoETFs5dI=
 github.com/multiformats/go-varint v0.1.0/go.mod h1:5KVAVXegtfmNQQm/lCY+ATvDzvJJhSkUlGQV9wgObdI=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
