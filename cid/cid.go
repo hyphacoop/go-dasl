@@ -82,6 +82,8 @@ type Cid struct {
 // A ForbiddenCidError is returned if it is invalid in any way.
 //
 // Note this is not the same as the bytes for a CID encoded in DRISL (CBOR).
+//
+// The input data is copied and so can be modified afterward.
 func NewCidFromBytes(in []byte) (Cid, error) {
 	// Follow these steps:
 	// https://dasl.ing/cid.html

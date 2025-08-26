@@ -54,8 +54,9 @@ func (c *RawCid) UnmarshalCBOR(b []byte) error {
 		return fmt.Errorf("invalid cid: unmarshal: got CBOR CID prefix 0x%02x, expect prefix 0x00", cidData[0])
 	}
 
-	// Skip 0x00 prefix
-	*c = cidData[1:]
+	// Skip 0x00 prefix and copy data
+	*c = make([]byte, len(cidData[1:]))
+	copy(*c, cidData[1:])
 	return nil
 }
 
