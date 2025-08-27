@@ -24,16 +24,32 @@ jobs:
           go-version: 'stable'
           cache: true
 
+      - name: Restore benchstat
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/benchstat
+          key: ${{ runner.os }}-benchstat
+
       - name: Install benchstat
-        run: go install golang.org/x/perf/cmd/benchstat@latest
+        run: |
+          if [[ ! -f ~/go/bin/benchstat ]]; then
+            go install golang.org/x/perf/cmd/benchstat@latest
+          fi
+
+      - name: Restore base benchmark result
+        uses: actions/cache@v4
+        with:
+          path: bench-base.txt
+          key: ${{ runner.os }}-bench-${{ github.event.pull_request.base.sha }}
 
       - name: Run benchmarks on current branch
-        run: go test -run='^$' -bench=. -count=20 ./drisl > current_bench.txt
+        run: go test -run='^$' -bench=. -count=20 ./drisl > bench-current.txt
 
-      - name: Get base branch benchmarks
+      - name: Run base branch benchmarks
+        if: !hashFiles('bench-base.txt')
         run: |
           git checkout ${{ github.event.pull_request.base.sha }}
-          go test -run='^$' -bench=. -count=20 ./drisl > base_bench.txt
+          go test -run='^$' -bench=. -count=20 ./drisl > bench-base.txt
           git checkout ${{ github.event.pull_request.head.sha }}
 
       - name: Compare benchmarks with benchstat
@@ -42,8 +58,9 @@ jobs:
           echo "" >> benchmark_report.md
           echo "### Performance Regression Analysis" >> benchmark_report.md
           echo '```' >> benchmark_report.md
-          benchstat base_bench.txt current_bench.txt >> benchmark_report.md || echo "No significant differences found" >> benchmark_report.md
+          benchstat bench-base.txt bench-current.txt >> benchmark_report.md || echo "No significant differences found" >> benchmark_report.md
           echo '```' >> benchmark_report.md
+          cat benchmark_report.md > $GITHUB_STEP_SUMMARY
 
       - name: Comment PR with benchmark results
         uses: marocchino/sticky-pull-request-comment@v2
@@ -51,4 +68,3 @@ jobs:
         with:
           recreate: true
           path: benchmark_report.md
-
