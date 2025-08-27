@@ -46,11 +46,12 @@ jobs:
         run: go test -run='^$' -bench=. -count=20 ./drisl > bench-current.txt
 
       - name: Run base branch benchmarks
-        if: !hashFiles('bench-base.txt')
         run: |
-          git checkout ${{ github.event.pull_request.base.sha }}
-          go test -run='^$' -bench=. -count=20 ./drisl > bench-base.txt
-          git checkout ${{ github.event.pull_request.head.sha }}
+          if [[ ! -f bench-base.txt ]]; then
+            git checkout ${{ github.event.pull_request.base.sha }}
+            go test -run='^$' -bench=. -count=20 ./drisl > bench-base.txt
+            git checkout ${{ github.event.pull_request.head.sha }}
+          fi
 
       - name: Compare benchmarks with benchstat
         run: |
