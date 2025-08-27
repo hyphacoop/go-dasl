@@ -43,13 +43,13 @@ jobs:
           key: ${{ runner.os }}-bench-${{ github.event.pull_request.base.sha }}
 
       - name: Run benchmarks on current branch
-        run: go test -run='^$' -bench=. -count=20 ./drisl > bench-current.txt
+        run: go test -run='^$' -bench=. -count=20 -benchmem ./drisl > bench-current.txt
 
       - name: Run base branch benchmarks
         run: |
           if [[ ! -f bench-base.txt ]]; then
             git checkout ${{ github.event.pull_request.base.sha }}
-            go test -run='^$' -bench=. -count=20 ./drisl > bench-base.txt
+            go test -run='^$' -bench=. -count=20 -benchmem ./drisl > bench-base.txt
             git checkout ${{ github.event.pull_request.head.sha }}
           fi
 
