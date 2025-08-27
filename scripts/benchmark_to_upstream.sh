@@ -5,4 +5,5 @@ set -xeuo pipefail
 go test -run='^$' -bench=. -count=20 ./drisl > /tmp/dasl_bench_new.txt
 cd internal/upstream_bench
 go test -run='^$' -bench=. -count=20 . > /tmp/dasl_bench_old.txt
-~/go/bin/benchstat /tmp/dasl_bench_old.txt /tmp/dasl_bench_new.txt
+sed -i '3s/\S\+/github.com\/hyphacoop\/go-dasl\/drisl/2' /tmp/dasl_bench_old.txt
+~/go/bin/benchstat /tmp/dasl_bench_old.txt /tmp/dasl_bench_new.txt | tee /tmp/benchstat.txt

@@ -4,6 +4,7 @@ package drisl_test
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -13,6 +14,14 @@ import (
 	"github.com/hyphacoop/go-dasl/cid"
 	"github.com/hyphacoop/go-dasl/drisl"
 )
+
+func hexDecode(s string) []byte {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
 
 type T1 struct {
 	T    bool
