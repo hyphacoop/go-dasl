@@ -4,7 +4,6 @@ go 1.24.5
 
 require (
 	github.com/hyphacoop/cbor/v2 v2.0.0-20250827195905-4b6b4a1b5aef
-	github.com/multiformats/go-varint v0.1.0
 	pgregory.net/rapid v1.2.0
 )
 
