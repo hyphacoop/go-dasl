@@ -324,10 +324,7 @@ func (c Cid) Digest() []byte {
 // cid.Cid{} or new(cid.Cid).
 // This method shouldn't be needed as long as you don't do this.
 func (c Cid) Defined() bool {
-	if c.b == nil {
-		return false
-	}
-	return true
+	return c.b != nil
 }
 
 // MarshalCBOR fulfills the drisl.Marshaler interface.

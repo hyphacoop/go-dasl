@@ -6,10 +6,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"math/big"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/hyphacoop/go-dasl/cid"
 	"github.com/hyphacoop/go-dasl/drisl"
@@ -107,26 +105,13 @@ type SomeFieldsAllOmitEmpty struct {
 
 var (
 	typeIntf            = reflect.TypeOf([]any(nil)).Elem()
-	typeTime            = reflect.TypeOf(time.Time{})
-	typeBigInt          = reflect.TypeOf(big.Int{})
 	typeString          = reflect.TypeOf("")
 	typeByteSlice       = reflect.TypeOf([]byte(nil))
 	typeBool            = reflect.TypeOf(true)
-	typeUint8           = reflect.TypeOf(uint8(0))
-	typeUint16          = reflect.TypeOf(uint16(0))
-	typeUint32          = reflect.TypeOf(uint32(0))
 	typeUint64          = reflect.TypeOf(uint64(0))
-	typeInt8            = reflect.TypeOf(int8(0))
-	typeInt16           = reflect.TypeOf(int16(0))
-	typeInt32           = reflect.TypeOf(int32(0))
 	typeInt64           = reflect.TypeOf(int64(0))
-	typeFloat32         = reflect.TypeOf(float32(0))
 	typeFloat64         = reflect.TypeOf(float64(0))
-	typeByteArray       = reflect.TypeOf([5]byte{})
 	typeIntSlice        = reflect.TypeOf([]int{})
-	typeStringSlice     = reflect.TypeOf([]string{})
-	typeMapIntfIntf     = reflect.TypeOf(map[any]any{})
-	typeMapStringInt    = reflect.TypeOf(map[string]int{})
 	typeMapStringString = reflect.TypeOf(map[string]string{})
 	typeMapStringIntf   = reflect.TypeOf(map[string]any{})
 	typeCID             = reflect.TypeOf(cid.Cid{})
