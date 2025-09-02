@@ -96,6 +96,8 @@ At this stage bug reports and fixes are welcome, but feature requests are out of
 Feature issues and PRs will be considered in the future.
 File an issue or discussion and let's talk!
 
+See also [CONTRIBUTING.md](./CONTRIBUTING.md).
+
 ## License
 
 This library is dual-licensed under MIT or Apache 2.0.
