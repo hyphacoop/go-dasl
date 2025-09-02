@@ -313,11 +313,8 @@ func (c Cid) Digest() [HashSize]byte {
 // cid.Cid{} or new(cid.Cid).
 // This method shouldn't be needed as long as you don't do this.
 func (c Cid) Defined() bool {
-	if c.b[0] == 0 {
-		// Assume it's all zeros
-		return false
-	}
-	return true
+	// Assume it's all zeros
+	return c.b[0] != 0
 }
 
 // MarshalCBOR fulfills the drisl.Marshaler interface.

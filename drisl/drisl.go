@@ -153,7 +153,7 @@ func Marshal(v any) ([]byte, error) {
 //	CBOR byte strings decode to []byte.
 //	CBOR text strings decode to string.
 //	CBOR arrays decode to []interface{}.
-//	CBOR maps decode to map[interface{}]interface{}.
+//	CBOR maps decode to map[string]interface{}.
 //	CBOR null values decode to nil.
 //
 // To unmarshal a CBOR array into a slice, Unmarshal allocates a new slice
@@ -174,7 +174,6 @@ func Marshal(v any) ([]byte, error) {
 // To unmarshal a CBOR map into a map, Unmarshal allocates a new map only if the
 // map is nil.  Otherwise Unmarshal reuses the existing map and keeps existing
 // entries.  Unmarshal stores key-value pairs from the CBOR map into Go map.
-// See DecOptions.DupMapKey to enable duplicate map key detection.
 //
 // To unmarshal a CBOR map into a struct, Unmarshal matches CBOR map keys to the
 // keys in the following priority:
@@ -184,8 +183,7 @@ func Marshal(v any) ([]byte, error) {
 //  3. struct field name.
 //
 // Unmarshal tries an exact match for field name, then a case-insensitive match.
-// Map key-value pairs without corresponding struct fields are ignored.  See
-// DecOptions.ExtraReturnErrors to return error at unknown field.
+// Map key-value pairs without corresponding struct fields are ignored.
 //
 // To unmarshal a CBOR text string into a time.Time value, Unmarshal parses text
 // string formatted in RFC3339.  To unmarshal a CBOR integer/float into a
@@ -200,8 +198,6 @@ func Marshal(v any) ([]byte, error) {
 //
 // Unmarshal returns ExtraneousDataError error (without decoding into v)
 // if there are any remaining bytes following the first valid CBOR data item.
-// See UnmarshalFirst, if you want to unmarshal only the first
-// CBOR data item without ExtraneousDataError caused by remaining bytes.
 func Unmarshal(data []byte, v any) error {
 	return drislDecMode.Unmarshal(data, v)
 }
@@ -237,7 +233,7 @@ type DecOptions struct {
 
 	// UseRawCid decodes CIDs into cid.RawCid instead of cid.Cid. This means CIDs will
 	// not be validated as strict DASL CIDs. This can be useful if you are decoding
-	// a document from the IPFS ecosystem, for example.
+	// a document from the IPFS ecosystem.
 	UseRawCid bool
 
 	// NoFloats disallows floats entirely.
@@ -418,10 +414,10 @@ type Unmarshaler interface {
 	UnmarshalCBOR([]byte) error
 }
 
-// CalculateCidForValue calculates the DRISL SHA-256 CID for the given Go value.
+// CidForValue calculates the DRISL SHA-256 CID for the given Go value.
 // This is achieved by marshalling it into DRISL and then hashing those bytes.
 // An error is returned if the value could not be marshalled.
-func CalculateCidForValue(v any) (cid.Cid, error) {
+func CidForValue(v any) (cid.Cid, error) {
 	b, err := Marshal(v)
 	if err != nil {
 		return cid.Cid{}, err
@@ -431,6 +427,7 @@ func CalculateCidForValue(v any) (cid.Cid, error) {
 }
 
 // RawMessage is a raw encoded DRISL value.
+// The underlying type is []byte.
 //
 // Like json.RawMessage, the RawMessage type can be used to delay DRISL
 // decoding or precompute DRISL encoding.
