@@ -18,7 +18,7 @@ func ExampleMarshal() {
 	}
 
 	// Create a CID for some data
-	id, _ := drisl.CalculateCidForValue(map[string]string{"hello": "world"})
+	id, _ := drisl.CidForValue(map[string]string{"hello": "world"})
 
 	data := Data{
 		Name:      "example",
