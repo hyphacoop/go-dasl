@@ -205,7 +205,6 @@ func NewCidFromString(s string) (Cid, error) {
 
 // NewCidFromInfo creates a DASL CID manually from the codec, hash type, and hash digest.
 // An error is only returned if the codec or hashType provided don't conform to DASL.
-// Currently the length of the digest is not validated.
 func NewCidFromInfo(codec Codec, hashType HashType, digest [HashSize]byte) (Cid, error) {
 	if codec != CodecRaw && codec != CodecDrisl {
 		return Cid{}, &ForbiddenCidError{"invalid codec"}
