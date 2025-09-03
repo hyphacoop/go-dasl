@@ -31,7 +31,7 @@ type Data struct {
 
 func main() {
     // Create a CID for some data
-    id, _ := drisl.CalculateCidForValue(map[string]string{"hello": "world"})
+    id, _ := drisl.CidForValue(map[string]string{"hello": "world"})
     ref, _ := cid.NewCidFromString("bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4")
 
     data := Data{
