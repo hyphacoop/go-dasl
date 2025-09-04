@@ -1,0 +1,13 @@
+# 2025/09/04 12:43:38.195074 [TestMASLRoundtrip] [rapid] draw document: masl.Document{data:map[string]interface {}{"roots":[]cid.Cid{}, "version":1}}
+# 2025/09/04 12:43:38.195104 [TestMASLRoundtrip] roundtrip failed: original != unmarshaled
+# 
+v0.4.8#15588163597777984604
+0x1
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
