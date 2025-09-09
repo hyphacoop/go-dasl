@@ -1,6 +1,7 @@
 package rasl
 
 import (
+	"context"
 	"crypto/sha256"
 	"hash"
 	"io"
@@ -41,12 +42,12 @@ func RedirectHandler(redirects map[string]string) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		http.Redirect(w, r, redir, 307)
+		http.Redirect(w, r, redir, http.StatusTemporaryRedirect)
 	})
 }
 
 // FuncHandler takes RASL requests and returns the data provided by a custom function.
-// You can use this easily create more complex CID -> data mappings, for example retrieving
+// You can use this to easily create more complex CID -> data mappings, for example retrieving
 // from some custom storage system.
 //
 // The function can return (nil, nil) to indicate the CID is not available and this is expected.
@@ -156,68 +157,83 @@ func DirectoryHandler(dir string, hashBlake3 bool) (http.Handler, error) {
 		path         string
 	}
 	retCh := make(chan ret)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	// Launch workers, waiting for paths
 	for i := 0; i < runtime.NumCPU(); i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for path := range pathCh {
-				f, err := os.Open(filepath.Join(dir, path))
-				if err != nil {
-					errCh <- err
+			for {
+				select {
+				case <-ctx.Done():
+					// Cancelled
 					return
-				}
-				// Close f manually so that files aren't left open while the loop runs
-				// Otherwise the max open file limit will be hit for large dirs on at
-				// least some OSes like macOS.
+				case path, ok := <-pathCh:
+					if !ok {
+						// No more paths
+						return
+					}
 
-				// Calculate data
-				var w io.Writer
-				hasherSha256 := sha256.New()
-				var hasherBlake3 hash.Hash
-				if hashBlake3 {
-					hasherBlake3 = blake3.New(cid.HashLength, nil)
-					w = io.MultiWriter(hasherSha256, hasherBlake3)
-				} else {
-					w = hasherSha256
-				}
-				_, err = io.Copy(w, f)
-				f.Close()
-				if err != nil {
-					errCh <- err
-					return
-				}
+					f, err := os.Open(filepath.Join(dir, path))
+					if err != nil {
+						errCh <- err
+						return
+					}
+					// Close f manually so that files aren't left open while the loop runs
+					// Otherwise the max open file limit will be hit for large dirs on at
+					// least some OSes like macOS.
 
-				// Return data
-				r := ret{
-					digestSha256: hasherSha256.Sum(nil),
-					path:         path,
+					// Calculate data
+					var w io.Writer
+					hasherSha256 := sha256.New()
+					var hasherBlake3 hash.Hash
+					if hashBlake3 {
+						hasherBlake3 = blake3.New(cid.HashLength, nil)
+						w = io.MultiWriter(hasherSha256, hasherBlake3)
+					} else {
+						w = hasherSha256
+					}
+					_, err = io.Copy(w, f)
+					f.Close()
+					if err != nil {
+						errCh <- err
+						return
+					}
+
+					// Return data
+					r := ret{
+						digestSha256: hasherSha256.Sum(nil),
+						path:         path,
+					}
+					if hashBlake3 {
+						r.digestBlake3 = hasherBlake3.Sum(nil)
+					}
+					retCh <- r
 				}
-				if hashBlake3 {
-					r.digestBlake3 = hasherBlake3.Sum(nil)
-				}
-				retCh <- r
 			}
 		}()
 	}
 
 	// Distribute file paths to workers
-	go fs.WalkDir(os.DirFS(dir), ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			errCh <- err
+	go func() {
+		fs.WalkDir(os.DirFS(dir), ".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				errCh <- err
+				return err // Stop
+			}
+			if d.IsDir() {
+				return nil
+			}
+			if d.Type() != 0 {
+				// Some sort of special file
+				return nil
+			}
+			pathCh <- path
 			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if d.Type() != 0 {
-			// Some sort of special file
-			return nil
-		}
-		pathCh <- path
-		return nil
-	})
+		})
+		close(pathCh)
+	}()
 
 	// Signal when all workers are done with no errors
 	go func() {
@@ -235,6 +251,8 @@ outer:
 				// All workers done without errors
 				break outer
 			} else {
+				// One worker had an error, stop all of them
+				cancel()
 				return nil, err
 			}
 		case r := <-retCh:

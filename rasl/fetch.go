@@ -29,13 +29,13 @@ var (
 // last Read call instead of io.EOF.
 //
 // Close the reader to clean up the network connection.
-func (ru *RaslUrl) Fetch() (io.ReadCloser, error) {
+func (ru *URL) Fetch() (io.ReadCloser, error) {
 	return ru.FetchWithClient(http.DefaultClient)
 }
 
 // FetchWithClient is the same as Fetch(), but allows setting a custom http.Client.
 // This can be used to set an overall timeout or make requests with cookies.
-func (ru *RaslUrl) FetchWithClient(client *http.Client) (io.ReadCloser, error) {
+func (ru *URL) FetchWithClient(client *http.Client) (io.ReadCloser, error) {
 	// Collect request results
 	type ret struct {
 		resp *http.Response
