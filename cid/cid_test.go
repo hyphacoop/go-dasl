@@ -129,3 +129,21 @@ func TestDigest(t *testing.T) {
 		t.Errorf(".Digest() = %x, want %x", cidCid.Digest(), cidDigest)
 	}
 }
+
+func TestUnmarshalText(t *testing.T) {
+	var c cid.Cid
+	err := c.UnmarshalText([]byte(cidStr))
+	if err != nil {
+		t.Error(err)
+	} else if c.String() != cidStr {
+		t.Fatalf("want %s, got %s", cidStr, c.String())
+	}
+}
+
+func TestBinary(t *testing.T) {
+	b, _ := cidCid.MarshalBinary()
+	b2, _ := cidCid.AppendBinary(nil)
+	if !bytes.Equal(b, b2) {
+		t.Errorf("MarshalBinary and AppendBinary are not equal: %x - %x", b, b2)
+	}
+}
