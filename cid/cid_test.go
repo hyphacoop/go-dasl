@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"io"
 	"os"
 	"testing"
@@ -145,5 +146,22 @@ func TestBinary(t *testing.T) {
 	b2, _ := cidCid.AppendBinary(nil)
 	if !bytes.Equal(b, b2) {
 		t.Errorf("MarshalBinary and AppendBinary are not equal: %x - %x", b, b2)
+	}
+}
+
+func TestJson(t *testing.T) {
+	j, err := json.Marshal(cidCid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(j) != `{"/":"bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4"}` {
+		t.Fatalf("bad json: %s", j)
+	}
+}
+
+func TestMarshalJson(t *testing.T) {
+	j, _ := cidCid.MarshalJSON()
+	if len(j) != cap(j) {
+		t.Fatalf("len %d, cap %d", len(j), cap(j))
 	}
 }

@@ -344,7 +344,23 @@ func (c Cid) MarshalCBOR() ([]byte, error) {
 // It follows the dag-json standard: {"/": "bafkr..."}
 // This just for simple display purposes.
 func (c Cid) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`{"/": "%s"}`, c.String())), nil
+	// Pre-calculate buffer size: {"/": + opening quote + CID string + closing quote + }
+	// CID string length = 1 (multibase prefix 'b') + base32 encoded length
+	cidLen := 1 + multibaseBase32.EncodedLen(len(c.b))
+	bufLen := 6 + cidLen + 2 // {"/": + } = 6, plus quotes for CID
+
+	buf := make([]byte, 0, bufLen)
+	buf = append(buf, `{"/":"`...)
+
+	// Inline the string encoding to avoid c.String() allocation
+	buf = append(buf, 'b')
+	// Encode directly into the buffer
+	oldLen := len(buf)
+	buf = buf[:oldLen+cidLen-1]
+	multibaseBase32.Encode(buf[oldLen:], c.b)
+
+	buf = append(buf, `"}`...)
+	return buf, nil
 }
 
 // MarshalText fulfills the encoding.TextMarshaler interface.
