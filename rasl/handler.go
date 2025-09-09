@@ -30,7 +30,7 @@ func RedirectHandler(redirects map[string]string) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		if !strings.HasPrefix(r.URL.Path, "/.well-known/rasl/bakfr") {
+		if !strings.HasPrefix(r.URL.Path, "/.well-known/rasl/bafkr") {
 			http.NotFound(w, r)
 			return
 		}
@@ -66,7 +66,7 @@ func FuncHandler(f func(cid.Cid) (io.Reader, error)) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		if !strings.HasPrefix(r.URL.Path, "/.well-known/rasl/bakfr") {
+		if !strings.HasPrefix(r.URL.Path, "/.well-known/rasl/bafkr") {
 			http.NotFound(w, r)
 			return
 		}
@@ -78,6 +78,10 @@ func FuncHandler(f func(cid.Cid) (io.Reader, error)) http.Handler {
 		reader, err := f(c)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if reader == nil {
+			http.NotFound(w, r)
 			return
 		}
 
@@ -113,7 +117,7 @@ func CidDirectoryHandler(dir string) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		if !strings.HasPrefix(r.URL.Path, "/.well-known/rasl/bakfr") {
+		if !strings.HasPrefix(r.URL.Path, "/.well-known/rasl/bafkr") {
 			http.NotFound(w, r)
 			return
 		}
@@ -124,7 +128,6 @@ func CidDirectoryHandler(dir string) http.Handler {
 			return
 		}
 
-		// TODO: does this header stick?
 		w.Header().Add("Content-Type", "application/octet-stream")
 		dirHandler.ServeHTTP(w, r)
 	})
@@ -271,7 +274,7 @@ outer:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		if !strings.HasPrefix(r.URL.Path, "/.well-known/rasl/bakfr") {
+		if !strings.HasPrefix(r.URL.Path, "/.well-known/rasl/bafkr") {
 			http.NotFound(w, r)
 			return
 		}
@@ -283,7 +286,6 @@ outer:
 			return
 		}
 
-		// TODO: does this header stick?
 		w.Header().Add("Content-Type", "application/octet-stream")
 		http.ServeFile(w, r, filepath.Join(dir, path))
 	}), nil
