@@ -54,6 +54,9 @@ func TestParse(t *testing.T) {
 			if err != nil || !reflect.DeepEqual(tt.out, u) {
 				t.Errorf("Parse(%s) = %#v, %v - want %#v", tt.in, u, err, tt.out)
 			}
+			if u.String() != tt.in {
+				t.Errorf("String: got %s - want %s", u, tt.in)
+			}
 		})
 	}
 }

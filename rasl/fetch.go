@@ -20,7 +20,7 @@ var (
 // Fetch retrieves the content if possible.
 //
 // All the provided hints are attempted in parallel, and the first successful response is used.
-// There is no overall timeout, although there may be underlying handshake timeouts etc.
+// There is no overall timeout, although there may be underlying handshake timeouts, etc.
 // If all hints fail, ErrAllHintsFailed is returned.
 // It is not safe to modify the hints slice while Fetch is running.
 //
@@ -34,8 +34,16 @@ func (ru *URL) Fetch() (io.ReadCloser, error) {
 }
 
 // FetchWithClient is the same as Fetch(), but allows setting a custom http.Client.
-// This can be used to set an overall timeout or make requests with cookies.
+// This can be used to set an overall timeout, make requests with cookies,
+// allow custom certificates, etc.
 func (ru *URL) FetchWithClient(client *http.Client) (io.ReadCloser, error) {
+	if client == nil {
+		return nil, errors.New("client cannot be nil")
+	}
+	if len(ru.Hints) == 0 {
+		return nil, ErrAllHintsFailed
+	}
+
 	// Collect request results
 	type ret struct {
 		resp *http.Response
@@ -72,13 +80,33 @@ func (ru *URL) FetchWithClient(client *http.Client) (io.ReadCloser, error) {
 				cancelers[j]()
 			}
 			body = r.resp.Body
+			i++
 			break
+		} else if r.resp != nil {
+			// Clean up resources
+			r.resp.Body.Close()
 		}
 		i++
 		if i == numReqs {
 			// All requests processed, nothing worked
 			return nil, ErrAllHintsFailed
 		}
+	}
+
+	// Clean up the other goroutines and the network requests
+	if i < numReqs {
+		go func() {
+			for r := range retCh {
+				if r.resp != nil {
+					r.resp.Body.Close()
+				}
+				i++
+				if i == numReqs {
+					// Nothing else will come out of that channel
+					return
+				}
+			}
+		}()
 	}
 
 	// Validate CID while letting user read

@@ -1,4 +1,4 @@
-// rasl implements the RASL URL scheme retrieving content-addressed resources.
+// Package rasl implements the RASL URL scheme for retrieving content-addressed resources.
 //
 // Example:
 //
@@ -16,6 +16,10 @@ import (
 	"github.com/hyphacoop/go-dasl/cid"
 )
 
+// URL stores all the information about a RASL URL.
+// You can construct this manually or use Parse to get it from a string.
+//
+// If constructed manually, you are responsible for making sure it is valid.
 type URL struct {
 	// Cid represents the content.
 	Cid cid.Cid
@@ -85,6 +89,8 @@ func Parse(rawUrl string) (*URL, error) {
 	return &ru, nil
 }
 
+// String creates a RASL URL from the struct data.
+// It does not do validation.
 func (ru *URL) String() string {
 	var sb strings.Builder
 	sb.WriteString("web+rasl://")

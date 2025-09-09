@@ -151,7 +151,7 @@ func DirectoryHandler(dir string, hashBlake3 bool) (http.Handler, error) {
 	// Which I give myself permission to reuse under the license in this repo
 
 	var wg sync.WaitGroup
-	errCh := make(chan error)
+	errCh := make(chan error, 16)
 	pathCh := make(chan string)
 
 	type ret struct {
@@ -159,7 +159,7 @@ func DirectoryHandler(dir string, hashBlake3 bool) (http.Handler, error) {
 		digestSha256 []byte
 		path         string
 	}
-	retCh := make(chan ret)
+	retCh := make(chan ret, 16)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Launch workers, waiting for paths
@@ -198,7 +198,11 @@ func DirectoryHandler(dir string, hashBlake3 bool) (http.Handler, error) {
 						w = hasherSha256
 					}
 					_, err = io.Copy(w, f)
-					f.Close()
+					if err != nil {
+						errCh <- err
+						return
+					}
+					err = f.Close()
 					if err != nil {
 						errCh <- err
 						return

@@ -118,4 +118,3 @@ func TestFetch_ParallelHints(t *testing.T) {
 		t.Fatalf("Data mismatch: got %q, want %q", data, testData)
 	}
 }
-
