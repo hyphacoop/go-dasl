@@ -268,6 +268,10 @@ outer:
 		}
 	}
 
+	// To reach this point, all workers must have completed
+	// But for safety, and to silence go vet, cancel them anyway
+	cancel()
+
 	// Create handler
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" && r.Method != "HEAD" {
