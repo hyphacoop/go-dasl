@@ -97,15 +97,19 @@ type verifyReader struct {
 
 func (vr *verifyReader) Read(p []byte) (n int, err error) {
 	n, err = vr.rc.Read(p)
+	if n > 0 {
+		// A copy is required since Write is allowed to modify the input
+		// Only copy the bytes actually read
+		pCopy := make([]byte, n)
+		copy(pCopy, p[:n])
+		vr.hasher.Write(pCopy)
+	}
 	if err == io.EOF {
 		// All bytes have been read
 		// Check hash and report
-		vr.hasher.Write(p)
 		if !bytes.Equal(vr.cid.Digest(), vr.hasher.Sum(nil)) {
 			return 0, ErrCidValidation
 		}
-	} else if err == nil {
-		vr.hasher.Write(p)
 	}
 	return
 }
