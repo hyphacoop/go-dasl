@@ -480,3 +480,26 @@ func TestNoFloatsUnmarshal(t *testing.T) {
 		t.Fatalf("want error")
 	}
 }
+
+type testStruct struct {
+	A int
+}
+
+func TestDisallowUnknownFields(t *testing.T) {
+	var v testStruct
+	dec, _ := drisl.DecOptions{DisallowUnknownFields: true}.DecMode()
+	err := dec.Unmarshal(hexDecode("a2614100614200"), &v)
+	t.Log(err)
+	if err == nil {
+		t.Fatal("want error")
+	}
+}
+
+func TestDisallowUnknownFields2(t *testing.T) {
+	var v testStruct
+	dec, _ := drisl.DecOptions{DisallowUnknownFields: true}.DecMode()
+	err := dec.Unmarshal(hexDecode("a1614100"), &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+}

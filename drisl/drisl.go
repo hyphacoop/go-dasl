@@ -238,6 +238,10 @@ type DecOptions struct {
 
 	// NoFloats disallows floats entirely.
 	NoFloats bool
+
+	// DisallowUnknownFields causes an error to be returned when the destination
+	// is a Go struct which doesn't have a field matching a key in the provided CBOR map.
+	DisallowUnknownFields bool
 }
 
 // DecMode is the main interface for decoding.
@@ -255,6 +259,10 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 	thisSvr := svr
 	if opts.AllowUndefined {
 		thisSvr = svrUndefined
+	}
+	extra := cbor.ExtraDecErrorNone
+	if opts.DisallowUnknownFields {
+		extra = cbor.ExtraDecErrorUnknownField
 	}
 	do := cbor.DecOptions{
 		// All these options combine to form valid DRISL decoding.
@@ -278,6 +286,7 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 		MaxMapPairs:        opts.MaxMapPairs,
 		Int64RangeOnly:     opts.Int64RangeOnly,
 		NoFloats:           opts.NoFloats,
+		ExtraReturnErrors:  extra,
 	}
 	if opts.UseRawCid {
 		return do.DecModeWithSharedTags(rawCidTag)
