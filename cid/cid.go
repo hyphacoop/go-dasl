@@ -275,8 +275,8 @@ func (c Cid) Bytes() []byte {
 // String returns the CID in string format.
 // It will always be CidStrLength bytes (or ASCII characters) long.
 func (c Cid) String() string {
-	s := multibaseBase32.EncodeToString(c.b[:])
-	return "b" + s
+	s, _ := c.MarshalText()
+	return string(s)
 }
 
 // Equals returns true if the two CIDs are exactly the same.
@@ -331,6 +331,50 @@ func (c Cid) MarshalCBOR() ([]byte, error) {
 	}, c.b[:]...), nil
 }
 
+// MarshalJSON fulfills the json.Marshaler interface.
+// It follows the dag-json standard: {"/": "bafkr..."}
+// This just for simple display purposes.
+func (c Cid) MarshalJSON() ([]byte, error) {
+	// Pre-calculate buffer size: {"/": + opening quote + CID string + closing quote + }
+	// CID string length = 1 (multibase prefix 'b') + base32 encoded length
+	cidLen := 1 + multibaseBase32.EncodedLen(len(c.b))
+	bufLen := 6 + cidLen + 2 // {"/": + } = 6, plus quotes for CID
+
+	buf := make([]byte, 0, bufLen)
+	buf = append(buf, `{"/":"`...)
+
+	// Inline the string encoding to avoid c.String() allocation
+	buf = append(buf, 'b')
+	// Encode directly into the buffer
+	oldLen := len(buf)
+	buf = buf[:oldLen+cidLen-1]
+	multibaseBase32.Encode(buf[oldLen:], c.b[:])
+
+	buf = append(buf, `"}`...)
+	return buf, nil
+}
+
+// MarshalText fulfills the encoding.TextMarshaler interface.
+// It is equivalent to String().
+func (c Cid) MarshalText() ([]byte, error) {
+	text := make([]byte, multibaseBase32.EncodedLen(len(c.b))+1)
+	text[0] = 'b'
+	multibaseBase32.Encode(text[1:], c.b[:])
+	return text, nil
+}
+
+// MarshalBinary fulfills the encoding.BinaryMarshaler interface.
+// It is equivalent to Bytes().
+func (c Cid) MarshalBinary() ([]byte, error) {
+	return c.Bytes(), nil
+}
+
+// AppendBinary fulfills the encoding.BinaryAppender interface.
+// It simply appends the Bytes() output.
+func (c Cid) AppendBinary(b []byte) ([]byte, error) {
+	return append(b, c.b[:]...), nil
+}
+
 // UnmarshalCBOR fulfills the drisl.Unmarshaler interface.
 func (c *Cid) UnmarshalCBOR(b []byte) error {
 	var tag cbor.Tag
@@ -359,6 +403,28 @@ func (c *Cid) UnmarshalCBOR(b []byte) error {
 
 	// Skip 0x00 prefix
 	parsed, err := NewCidFromBytes(cidData[1:])
+	if err != nil {
+		return err
+	}
+	*c = parsed
+	return nil
+}
+
+// UnmarshalText fulfills the encoding.TextUnmarshaler interface.
+// It is equivalent to NewCidFromString.
+func (c *Cid) UnmarshalText(text []byte) error {
+	parsed, err := NewCidFromString(string(text))
+	if err != nil {
+		return err
+	}
+	*c = parsed
+	return nil
+}
+
+// UnmarshalBinary fulfills the encoding.BinaryUnmarshaler interface.
+// It is equivalent to NewCidFromBytes.
+func (c *Cid) UnmarshalBinary(data []byte) error {
+	parsed, err := NewCidFromBytes(data)
 	if err != nil {
 		return err
 	}
