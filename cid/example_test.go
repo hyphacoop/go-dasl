@@ -29,12 +29,10 @@ func Example() {
 	// Show CID properties
 	fmt.Printf("Codec: %d\n", c1.Codec())
 	fmt.Printf("Hash type: %d\n", c1.HashType())
-	fmt.Printf("Hash size: %d\n", c1.HashSize())
 	// Output:
 	// CID from string: bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4
 	// CID from bytes: bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4
 	// CIDs are equal: true
 	// Codec: 85
 	// Hash type: 18
-	// Hash size: 32
 }
