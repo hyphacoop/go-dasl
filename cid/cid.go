@@ -69,8 +69,12 @@ func (e *ForbiddenCidError) Error() string {
 }
 
 // Cid is a DASL CID.
+//
 // It is always valid, unless created directly such as cid.Cid{} or new(cid.Cid).
 // That will cause panics if methods are called upon it, unless otherwise documented.
+//
+// Programs using CIDs should typically store and pass them as values, not pointers.
+// That is, CID variables and struct fields should be of type cid.Cid, not *cid.Cid.
 //
 // https://dasl.ing/cid.html
 type Cid struct {
