@@ -165,3 +165,22 @@ func TestMarshalJson(t *testing.T) {
 		t.Fatalf("len %d, cap %d", len(j), cap(j))
 	}
 }
+
+func TestDefined(t *testing.T) {
+	var c cid.Cid
+	if c.Defined() {
+		t.Errorf("Defined = true for zero value Cid")
+	}
+	if _, err := c.MarshalCBOR(); err == nil {
+		t.Errorf("MarshalCBOR succeeded for zero value Cid")
+	}
+	if _, err := c.MarshalJSON(); err == nil {
+		t.Errorf("MarshalJSON succeeded for zero value Cid")
+	}
+	if _, err := c.MarshalText(); err == nil {
+		t.Errorf("MarshalText succeeded for zero value Cid")
+	}
+	if _, err := c.MarshalBinary(); err == nil {
+		t.Errorf("MarshalBinary succeeded for zero value Cid")
+	}
+}
