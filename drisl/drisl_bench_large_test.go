@@ -2,6 +2,7 @@ package drisl_test
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"testing"
@@ -113,6 +114,9 @@ func BenchmarkUnmarshalTwitterCid(b *testing.B) {
 func BenchmarkUnmarshalBluesky(b *testing.B) {
 	f, err := os.Open("/tmp/firehose.bin")
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			b.Skip("/tmp/firehose.bin not found")
+		}
 		panic(err)
 	}
 	defer f.Close()
