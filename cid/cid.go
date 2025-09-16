@@ -294,19 +294,17 @@ func (c Cid) VerifyBytes(b []byte) bool {
 // VerifyReader checks whether the provided reader data matches the hash digest in the CID.
 // The codec information is not checked.
 func (c Cid) VerifyReader(r io.Reader) (bool, error) {
-	var hasher hash.Hash
-	if c.HashType() == HashTypeSha256 {
-		hasher = sha256.New()
-	} else {
-		hasher = blake3.New(HashLength, nil)
-	}
+	hasher := c.Hasher()
 	if _, err := io.Copy(hasher, r); err != nil {
 		return false, err
 	}
 	return bytes.Equal(c.Digest(), hasher.Sum(nil)), nil
 }
 
-// Hasher returns the appropriate hash interface based on the hash type of the CID.
+// Hasher returns a new appropriate hash interface based on the hash type of the CID.
+//
+// This could be used to hash some data and compare against the CID digest, although
+// note VerifyBytes and VerifyReader already do that.
 func (c Cid) Hasher() hash.Hash {
 	if c.HashType() == HashTypeSha256 {
 		return sha256.New()
