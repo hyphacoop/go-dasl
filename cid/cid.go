@@ -50,7 +50,7 @@ var (
 	// Try not to use it as a sentinel value.
 	EmptyCid = Cid{b: hexDecode("01551220e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")}
 
-	UndefinedCidError = errors.New("go-dasl/cid: cannot marshal nil Cid")
+	ErrUndefinedCid = errors.New("go-dasl/cid: cannot marshal nil Cid")
 )
 
 func hexDecode(s string) []byte {
@@ -338,7 +338,7 @@ func (c Cid) Defined() bool {
 // MarshalCBOR fulfills the drisl.Marshaler interface.
 func (c Cid) MarshalCBOR() ([]byte, error) {
 	if c.b == nil {
-		return nil, UndefinedCidError
+		return nil, ErrUndefinedCid
 	}
 	// CID in CBOR is just CID bytes with 0x00 prepended
 	return cbor.Marshal(cbor.Tag{
@@ -352,7 +352,7 @@ func (c Cid) MarshalCBOR() ([]byte, error) {
 // This is just for simple display purposes.
 func (c Cid) MarshalJSON() ([]byte, error) {
 	if c.b == nil {
-		return nil, UndefinedCidError
+		return nil, ErrUndefinedCid
 	}
 	// Pre-calculate buffer size: {"/": + opening quote + CID string + closing quote + }
 	// CID string length = 1 (multibase prefix 'b') + base32 encoded length
@@ -377,7 +377,7 @@ func (c Cid) MarshalJSON() ([]byte, error) {
 // It is equivalent to String().
 func (c Cid) MarshalText() ([]byte, error) {
 	if c.b == nil {
-		return nil, UndefinedCidError
+		return nil, ErrUndefinedCid
 	}
 	text := make([]byte, multibaseBase32.EncodedLen(len(c.b))+1)
 	text[0] = 'b'
@@ -389,7 +389,7 @@ func (c Cid) MarshalText() ([]byte, error) {
 // It is equivalent to Bytes().
 func (c Cid) MarshalBinary() ([]byte, error) {
 	if c.b == nil {
-		return nil, UndefinedCidError
+		return nil, ErrUndefinedCid
 	}
 	return c.Bytes(), nil
 }
@@ -398,7 +398,7 @@ func (c Cid) MarshalBinary() ([]byte, error) {
 // It simply appends the Bytes() output.
 func (c Cid) AppendBinary(b []byte) ([]byte, error) {
 	if c.b == nil {
-		return nil, UndefinedCidError
+		return nil, ErrUndefinedCid
 	}
 	return append(b, c.b...), nil
 }
