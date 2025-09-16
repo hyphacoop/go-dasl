@@ -7,6 +7,7 @@ package drisl
 
 import (
 	"crypto/sha256"
+	"io"
 	"reflect"
 
 	"github.com/hyphacoop/cbor/v2"
@@ -126,6 +127,14 @@ func Marshal(v any) ([]byte, error) {
 	return drislEncMode.Marshal(v)
 }
 
+// NewEncoder returns a new encoder that writes to w using the default encoding options.
+//
+// That encoder has methods for creating indefinite length items, but they will
+// all return an error because indefinite items are disabled in DRISL.
+func NewEncoder(w io.Writer) *cbor.Encoder {
+	return drislEncMode.NewEncoder(w)
+}
+
 // Unmarshal parses the DRISL-encoded data into the value pointed to by v
 // using default decoding options.  If v is nil, not a pointer, or
 // a nil pointer, Unmarshal returns an error.
@@ -202,6 +211,11 @@ func Unmarshal(data []byte, v any) error {
 	return drislDecMode.Unmarshal(data, v)
 }
 
+// NewDecoder returns a new decoder that reads and decodes from r using the default decoding options.
+func NewDecoder(r io.Reader) *cbor.Decoder {
+	return drislDecMode.NewDecoder(r)
+}
+
 // func Valid(data []byte) bool {
 // 	// XXX: this is correct but inefficient
 // 	var v any
@@ -252,6 +266,9 @@ type DecMode interface {
 	//
 	// See the documentation for Unmarshal for details.
 	Unmarshal(data []byte, v any) error
+
+	// NewDecoder returns a new decoder that reads from r.
+	NewDecoder(r io.Reader) *cbor.Decoder
 }
 
 // DecMode returns a DecMode to decode with the given options.
@@ -378,6 +395,12 @@ type EncOptions struct {
 // EncMode is the main interface for encoding.
 type EncMode interface {
 	Marshal(v any) ([]byte, error)
+
+	// NewEncoder returns a new encoder that writes to w using the default encoding options.
+	//
+	// That encoder has methods for creating indefinite length items, but they will
+	// all return an error because indefinite items are disabled in DRISL.
+	NewEncoder(w io.Writer) *cbor.Encoder
 }
 
 // EncMode returns an EncMode to encode with the given options.
