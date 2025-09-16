@@ -437,7 +437,7 @@ type Marshaler interface {
 }
 
 // Unmarshaler is the interface implemented by types that wish to unmarshal
-// CBOR data themselves.  The input is a valid CBOR value. UnmarshalCBOR
+// CBOR data themselves. The input is a valid CBOR value. UnmarshalCBOR
 // must copy the CBOR data if it needs to use it after returning.
 //
 // Only DRISL-compliant CBOR will be provided to this function. drisl.Unmarshal
