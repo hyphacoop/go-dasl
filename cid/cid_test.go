@@ -17,7 +17,7 @@ import (
 var (
 	cidStr    = "bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4"
 	cidBytes  = hexDecode("01551220adee2e8fb5459c9bcf07d7d78d1183bf40a7f60f57a54a19194801c9a27ead87")
-	cidDigest = hexDecode("adee2e8fb5459c9bcf07d7d78d1183bf40a7f60f57a54a19194801c9a27ead87")
+	cidDigest = *(*[32]byte)(hexDecode("adee2e8fb5459c9bcf07d7d78d1183bf40a7f60f57a54a19194801c9a27ead87"))
 	cidCid    = MustCid(cidStr)
 )
 
@@ -45,7 +45,7 @@ func TestNewCidFromString(t *testing.T) {
 	if c.String() != cidStr {
 		t.Fatalf("want %s, got %s", cidStr, c.String())
 	}
-	if !bytes.Equal(c.Bytes(), cidBytes) {
+	if !bytes.Equal(c.Bytes()[:], cidBytes) {
 		t.Fatalf("want %x, got %x", cidBytes, c.Bytes())
 	}
 }
@@ -119,15 +119,16 @@ func TestNewCidFromInfo(t *testing.T) {
 	}
 }
 
-func TestHashSize(t *testing.T) {
-	if cidCid.HashSize() != 32 {
-		t.Errorf(".HashSize() = %d, want 32", cidCid.HashSize())
+func TestDigest(t *testing.T) {
+	digest := cidCid.Digest()
+	if digest != cidDigest {
+		t.Errorf(".Digest() = %x, want %x", cidCid.Digest(), cidDigest)
 	}
 }
 
-func TestDigest(t *testing.T) {
-	if !bytes.Equal(cidCid.Digest(), cidDigest) {
-		t.Errorf(".Digest() = %x, want %x", cidCid.Digest(), cidDigest)
+func TestEmptyCid(t *testing.T) {
+	if !bytes.Equal(cid.EmptyCid.Bytes()[:], hexDecode("01551220e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")) {
+		t.Errorf("EmptyCid has bad data")
 	}
 }
 
