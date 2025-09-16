@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"math/big"
 	"os"
@@ -501,5 +502,38 @@ func TestDisallowUnknownFields2(t *testing.T) {
 	err := dec.Unmarshal(hexDecode("a1614100"), &v)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestEncoderIndefinite(t *testing.T) {
+	enc := drisl.NewEncoder(io.Discard)
+	if err := enc.StartIndefiniteArray(); err == nil {
+		t.Errorf("Encoder indefinite succeeded")
+	}
+}
+
+func TestEncoder(t *testing.T) {
+	// Just a simple sanity check the encoder works
+	var buf bytes.Buffer
+	enc := drisl.NewEncoder(&buf)
+	enc.Encode(1)
+	enc.Encode(1)
+	if !bytes.Equal(buf.Bytes(), []byte{0x01, 0x01}) {
+		t.Errorf("Encoder(0, 0) = %x", buf.Bytes())
+	}
+}
+
+func TestDecoder(t *testing.T) {
+	// Sanity check decoder
+	buf := bytes.NewReader([]byte{0x01, 0x01})
+	dec := drisl.NewDecoder(buf)
+	var v any
+	err := dec.Decode(&v)
+	if err != nil || v.(uint64) != 1 {
+		t.Errorf("Decode(0x0101) = %v, %v", v, err)
+	}
+	err = dec.Decode(&v)
+	if err != nil || v.(uint64) != 1 {
+		t.Errorf("Decode(0x01) = %v, %v", v, err)
 	}
 }
