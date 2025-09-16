@@ -349,6 +349,7 @@ func (c Cid) MarshalCBOR() ([]byte, error) {
 
 // MarshalJSON fulfills the json.Marshaler interface.
 // It follows the dag-json standard: {"/": "bafkr..."}
+//
 // This is just for simple display purposes.
 func (c Cid) MarshalJSON() ([]byte, error) {
 	if c.b == nil {
