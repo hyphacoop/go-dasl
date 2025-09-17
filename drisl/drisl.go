@@ -326,7 +326,7 @@ type TimeMode int
 // make TimeRFC3339Nano the default because I think it's obviously a better choice.
 
 const (
-	// TimeRFC3339Nano causes time.Time to encode to a CBOR time (tag 0) with a text string content
+	// TimeRFC3339Nano causes time.Time to encode to a CBOR string with content
 	// representing the time using 1-nanosecond precision in RFC3339 format.  If the time.Time has a
 	// non-UTC timezone then a "localtime - UTC" numeric offset will be included as specified in RFC3339.
 	// NOTE: User applications can avoid including the RFC3339 numeric offset by:
@@ -336,25 +336,25 @@ const (
 	// This is the default.
 	TimeRFC3339Nano TimeMode = iota
 
-	// TimeUnix causes time.Time to encode to a CBOR time (tag 1) with an integer content
+	// TimeUnix causes time.Time to encode to a CBOR integer with content
 	// representing seconds elapsed (with 1-second precision) since UNIX Epoch UTC.
 	// The TimeUnix option is location independent and has a clear precision guarantee.
 	TimeUnix
 
-	// TimeUnixMicro causes time.Time to encode to a CBOR time (tag 1) with a floating point content
+	// TimeUnixMicro causes time.Time to encode to a CBOR float with content
 	// representing seconds elapsed (with up to 1-microsecond precision) since UNIX Epoch UTC.
 	// NOTE: The floating point content is encoded to the shortest floating-point encoding that preserves
 	// the 64-bit floating point value. I.e., the floating point encoding can be IEEE 764:
 	// binary64, binary32, or binary16 depending on the content's value.
 	TimeUnixMicro
 
-	// TimeUnixDynamic causes time.Time to encode to a CBOR time (tag 1) with either an integer content or
+	// TimeUnixDynamic causes time.Time to encode to a CBOR item with either an integer content or
 	// a floating point content, depending on the content's value.  This option is equivalent to dynamically
 	// choosing TimeUnix if time.Time doesn't have fractional seconds, and using TimeUnixMicro if time.Time
 	// has fractional seconds.
 	TimeUnixDynamic
 
-	// TimeRFC3339 causes time.Time to encode to a CBOR time (tag 0) with a text string content
+	// TimeRFC3339 causes time.Time to encode to a CBOR string with content
 	// representing the time using 1-second precision in RFC3339 format.  If the time.Time has a
 	// non-UTC timezone then a "localtime - UTC" numeric offset will be included as specified in RFC3339.
 	// NOTE: User applications can avoid including the RFC3339 numeric offset by:
