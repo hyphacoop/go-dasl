@@ -24,7 +24,7 @@ func Example() {
 	fmt.Printf("CID from bytes: %s\n", c2.String())
 
 	// Both should be equal
-	fmt.Printf("CIDs are equal: %t\n", c1.Equals(c2))
+	fmt.Printf("CIDs are equal: %t\n", c1.Equal(c2))
 
 	// Show CID properties
 	fmt.Printf("Codec: %d\n", c1.Codec())

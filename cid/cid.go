@@ -282,13 +282,13 @@ func (c Cid) String() string {
 	return string(s)
 }
 
-// Equals returns true if the two CIDs are exactly the same.
+// Equal returns true if the two CIDs are exactly the same.
 //
 // CIDs with the same hash type and digest but different codecs are not considered equal.
 //
 // This is equivalent to comparing the .Bytes() or .String() output of two CIDs,
 // but more efficient.
-func (c Cid) Equals(o Cid) bool {
+func (c Cid) Equal(o Cid) bool {
 	return bytes.Equal(c.b, o.b)
 }
 
