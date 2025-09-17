@@ -212,6 +212,10 @@ func Unmarshal(data []byte, v any) error {
 }
 
 // NewDecoder returns a new decoder that reads and decodes from r using the default decoding options.
+//
+// Use this to decode streams of concatenated DRISL items. For single DRISL items
+// (even those stored in an io.Reader), read the data into a byte slice and use Unmarshal.
+// Unmarshal will not ignore if extra data has been incorrectly appended to the data item.
 func NewDecoder(r io.Reader) *cbor.Decoder {
 	return drislDecMode.NewDecoder(r)
 }
@@ -268,6 +272,10 @@ type DecMode interface {
 	Unmarshal(data []byte, v any) error
 
 	// NewDecoder returns a new decoder that reads from r.
+	//
+	// Use this to decode streams of concatenated DRISL items. For single DRISL items
+	// (even those stored in an io.Reader), read the data into a byte slice and use Unmarshal.
+	// Unmarshal will not ignore if extra data has been incorrectly appended to the data item.
 	NewDecoder(r io.Reader) *cbor.Decoder
 }
 
