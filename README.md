@@ -66,6 +66,27 @@ As a special case, struct field tag "-" omits the field.
 
 NOTE: When a struct uses `toarray`, the encoder will ignore `omitempty` and `omitzero` to prevent position of encoded array elements from changing. This allows decoder to match encoded elements to their Go struct field.
 
+Example usage:
+
+```go
+type myData struct {
+    // Convert struct fields to CBOR array to reduce size
+    _       struct{} `cbor:",toarray"`
+    Payload []byte
+    Age     int
+    Name    string
+    // Etc
+}
+
+// Use omitempty and field naming
+type myData2 struct {
+    Payload []byte
+    Age     int    `cbor:",omitempty"`
+    Name    string `cbor:"my_name"`
+    Secret []byte  `cbor:"-"` // Skip
+}
+```
+
 ## Submodules
 
 DASL has many specs, only some of which are implemented here.
