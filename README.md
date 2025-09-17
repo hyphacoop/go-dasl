@@ -2,7 +2,10 @@
 
 A Go reference library for [DASL](https://dasl.ing).
 
-🚧 Not ready for production yet 🚧
+## Project Status (Sep 2025)
+
+This project is active and works well. Breaking changes will still occur, but you can use it today.
+Production use cases are recommended to wait until the API settles, by v1 at the latest.
 
 ## Usage
 
