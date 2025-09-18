@@ -62,8 +62,8 @@ Struct tags automatically reduce encoded size of structs and improve speed.
 
 We can write less code by using struct tag options:
 - `toarray`: encode without field names (decode back to original struct)
-- `omitempty`: omit empty field when encoding
-- `omitzero`: omit zero-value field when encoding
+- `omitempty`: omit empty field when encoding (same rules as encoding/json)
+- `omitzero`: omit zero-value field when encoding (same rules as encoding/json)
 
 As a special case, struct field tag "-" omits the field.
 
@@ -86,7 +86,8 @@ type myData2 struct {
     Payload []byte
     Age     int    `cbor:",omitempty"`
     Name    string `cbor:"my_name"`
-    Secret []byte  `cbor:"-"` // Skip
+    Secret []byte  `cbor:"-"`         // Skip
+    Ref    cid.Cid `cbor:",omitzero"` // Use omitzero (if needed) for CIDs
 }
 ```
 

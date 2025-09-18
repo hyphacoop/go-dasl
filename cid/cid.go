@@ -50,7 +50,7 @@ var (
 	// Try not to use it as a sentinel value.
 	EmptyCid = Cid{b: hexDecode("01551220e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")}
 
-	ErrUndefinedCid = errors.New("go-dasl/cid: cannot marshal nil Cid")
+	ErrUndefinedCid = errors.New("go-dasl/cid: cannot marshal nil Cid (use omitzero over omitempty)")
 )
 
 func hexDecode(s string) []byte {
@@ -79,6 +79,9 @@ func (e *ForbiddenCidError) Error() string {
 //
 // Programs using CIDs should typically store and pass them as values, not pointers.
 // That is, CID variables and struct fields should be of type cid.Cid, not *cid.Cid.
+//
+// If you want to omit empty CID values from being encoded, use the omitzero struct
+// tag instead of omitempty.
 //
 // https://dasl.ing/cid.html
 type Cid struct {
