@@ -89,7 +89,7 @@ type Cid struct {
 	b []byte
 }
 
-// NewCidFromBytes creates a new DASL CID from the given bytes.
+// NewCidFromBytes parses a binary DASL CID.
 // A ForbiddenCidError is returned if it is invalid in any way.
 //
 // Note this is not the same as the bytes for a CID encoded in DRISL (CBOR).
@@ -130,7 +130,7 @@ type ReadByteReader interface {
 	io.ByteReader
 }
 
-// NewCidFromReader reads a binary DASL CID from the given reader.
+// NewCidFromReader parses a binary DASL CID from the given reader.
 // A ForbiddenCidError is returned if it is invalid in any way.
 // Extra data after the CID is allowed.
 //
@@ -194,7 +194,7 @@ func NewCidFromReader(r ReadByteReader) (Cid, error) {
 	return cid, nil
 }
 
-// NewCidFromString creates a new DASL CID from the given string.
+// NewCidFromString parses a string DASL CID.
 // A ForbiddenCidError is returned if it is invalid DASL.
 func NewCidFromString(s string) (Cid, error) {
 	if len(s) == 0 {
