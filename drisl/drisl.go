@@ -463,7 +463,7 @@ func CidForValue(v any) (cid.Cid, error) {
 		return cid.Cid{}, err
 	}
 	digest := sha256.Sum256(b)
-	return cid.NewCidFromInfo(cid.CodecDrisl, cid.HashTypeSha256, digest[:])
+	return cid.NewCidFromInfo(cid.CodecDrisl, cid.HashTypeSha256, digest)
 }
 
 // RawMessage is a raw encoded DRISL value.
