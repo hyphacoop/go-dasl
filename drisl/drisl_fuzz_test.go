@@ -46,6 +46,34 @@ func FuzzUnmarshal(f *testing.F) {
 	})
 }
 
+// Make sure Decoder performs the same as Unmarshal
+func FuzzDecoder(f *testing.F) {
+	for _, seed := range seeds() {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, val []byte) {
+		var v any
+		decoder := drisl.NewDecoder(bytes.NewReader(val))
+		err := decoder.Decode(&v)
+		if err == nil && decoder.NumBytesRead() == len(val) {
+			// No error and it wasn't an extra data test, just one cbor value
+			// So marshal can match it
+			result, err := drisl.Marshal(v)
+			if err != nil {
+				t.Errorf("Example %x produced marshaling error %v", val, err)
+			} else if !bytes.Equal(result, val) {
+				t.Errorf("got %x, want %x", result, val)
+			}
+		} else if err != nil {
+			// Make sure it's a normal error unmarshal would also have
+			err2 := drisl.Unmarshal(val, &v)
+			if err2 == nil {
+				t.Errorf("Decode: %v | Unmarshal: nil", err)
+			}
+		}
+	})
+}
+
 type marshaler struct{ val []byte }
 
 func (m marshaler) MarshalCBOR() ([]byte, error) {

@@ -7,6 +7,7 @@ package drisl
 
 import (
 	"crypto/sha256"
+	"io"
 	"reflect"
 
 	"github.com/hyphacoop/cbor/v2"
@@ -126,6 +127,14 @@ func Marshal(v any) ([]byte, error) {
 	return drislEncMode.Marshal(v)
 }
 
+// NewEncoder returns a new encoder that writes to w using the default encoding options.
+//
+// That encoder has methods for creating indefinite length items, but they will
+// all return an error because indefinite items are disabled in DRISL.
+func NewEncoder(w io.Writer) *cbor.Encoder {
+	return drislEncMode.NewEncoder(w)
+}
+
 // Unmarshal parses the DRISL-encoded data into the value pointed to by v
 // using default decoding options.  If v is nil, not a pointer, or
 // a nil pointer, Unmarshal returns an error.
@@ -202,6 +211,15 @@ func Unmarshal(data []byte, v any) error {
 	return drislDecMode.Unmarshal(data, v)
 }
 
+// NewDecoder returns a new decoder that reads and decodes from r using the default decoding options.
+//
+// Use this to decode streams of concatenated DRISL items. For single DRISL items
+// (even those stored in an io.Reader), read the data into a byte slice and use Unmarshal.
+// Unmarshal will not ignore if extra data has been incorrectly appended to the data item.
+func NewDecoder(r io.Reader) *cbor.Decoder {
+	return drislDecMode.NewDecoder(r)
+}
+
 // func Valid(data []byte) bool {
 // 	// XXX: this is correct but inefficient
 // 	var v any
@@ -238,6 +256,10 @@ type DecOptions struct {
 
 	// NoFloats disallows floats entirely.
 	NoFloats bool
+
+	// DisallowUnknownFields causes an error to be returned when the destination
+	// is a Go struct which doesn't have a field matching a key in the provided CBOR map.
+	DisallowUnknownFields bool
 }
 
 // DecMode is the main interface for decoding.
@@ -248,6 +270,13 @@ type DecMode interface {
 	//
 	// See the documentation for Unmarshal for details.
 	Unmarshal(data []byte, v any) error
+
+	// NewDecoder returns a new decoder that reads from r.
+	//
+	// Use this to decode streams of concatenated DRISL items. For single DRISL items
+	// (even those stored in an io.Reader), read the data into a byte slice and use Unmarshal.
+	// Unmarshal will not ignore if extra data has been incorrectly appended to the data item.
+	NewDecoder(r io.Reader) *cbor.Decoder
 }
 
 // DecMode returns a DecMode to decode with the given options.
@@ -255,6 +284,10 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 	thisSvr := svr
 	if opts.AllowUndefined {
 		thisSvr = svrUndefined
+	}
+	extra := cbor.ExtraDecErrorNone
+	if opts.DisallowUnknownFields {
+		extra = cbor.ExtraDecErrorUnknownField
 	}
 	do := cbor.DecOptions{
 		// All these options combine to form valid DRISL decoding.
@@ -278,6 +311,7 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 		MaxMapPairs:        opts.MaxMapPairs,
 		Int64RangeOnly:     opts.Int64RangeOnly,
 		NoFloats:           opts.NoFloats,
+		ExtraReturnErrors:  extra,
 	}
 	if opts.UseRawCid {
 		return do.DecModeWithSharedTags(rawCidTag)
@@ -292,7 +326,7 @@ type TimeMode int
 // make TimeRFC3339Nano the default because I think it's obviously a better choice.
 
 const (
-	// TimeRFC3339Nano causes time.Time to encode to a CBOR time (tag 0) with a text string content
+	// TimeRFC3339Nano causes time.Time to encode to a CBOR string with content
 	// representing the time using 1-nanosecond precision in RFC3339 format.  If the time.Time has a
 	// non-UTC timezone then a "localtime - UTC" numeric offset will be included as specified in RFC3339.
 	// NOTE: User applications can avoid including the RFC3339 numeric offset by:
@@ -302,25 +336,25 @@ const (
 	// This is the default.
 	TimeRFC3339Nano TimeMode = iota
 
-	// TimeUnix causes time.Time to encode to a CBOR time (tag 1) with an integer content
+	// TimeUnix causes time.Time to encode to a CBOR integer with content
 	// representing seconds elapsed (with 1-second precision) since UNIX Epoch UTC.
 	// The TimeUnix option is location independent and has a clear precision guarantee.
 	TimeUnix
 
-	// TimeUnixMicro causes time.Time to encode to a CBOR time (tag 1) with a floating point content
+	// TimeUnixMicro causes time.Time to encode to a CBOR float with content
 	// representing seconds elapsed (with up to 1-microsecond precision) since UNIX Epoch UTC.
 	// NOTE: The floating point content is encoded to the shortest floating-point encoding that preserves
 	// the 64-bit floating point value. I.e., the floating point encoding can be IEEE 764:
 	// binary64, binary32, or binary16 depending on the content's value.
 	TimeUnixMicro
 
-	// TimeUnixDynamic causes time.Time to encode to a CBOR time (tag 1) with either an integer content or
+	// TimeUnixDynamic causes time.Time to encode to a CBOR item with either an integer content or
 	// a floating point content, depending on the content's value.  This option is equivalent to dynamically
 	// choosing TimeUnix if time.Time doesn't have fractional seconds, and using TimeUnixMicro if time.Time
 	// has fractional seconds.
 	TimeUnixDynamic
 
-	// TimeRFC3339 causes time.Time to encode to a CBOR time (tag 0) with a text string content
+	// TimeRFC3339 causes time.Time to encode to a CBOR string with content
 	// representing the time using 1-second precision in RFC3339 format.  If the time.Time has a
 	// non-UTC timezone then a "localtime - UTC" numeric offset will be included as specified in RFC3339.
 	// NOTE: User applications can avoid including the RFC3339 numeric offset by:
@@ -369,6 +403,12 @@ type EncOptions struct {
 // EncMode is the main interface for encoding.
 type EncMode interface {
 	Marshal(v any) ([]byte, error)
+
+	// NewEncoder returns a new encoder that writes to w using the default encoding options.
+	//
+	// That encoder has methods for creating indefinite length items, but they will
+	// all return an error because indefinite items are disabled in DRISL.
+	NewEncoder(w io.Writer) *cbor.Encoder
 }
 
 // EncMode returns an EncMode to encode with the given options.
@@ -405,7 +445,7 @@ type Marshaler interface {
 }
 
 // Unmarshaler is the interface implemented by types that wish to unmarshal
-// CBOR data themselves.  The input is a valid CBOR value. UnmarshalCBOR
+// CBOR data themselves. The input is a valid CBOR value. UnmarshalCBOR
 // must copy the CBOR data if it needs to use it after returning.
 //
 // Only DRISL-compliant CBOR will be provided to this function. drisl.Unmarshal
