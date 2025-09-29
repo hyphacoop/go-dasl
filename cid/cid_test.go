@@ -160,8 +160,9 @@ func TestJson(t *testing.T) {
 	}
 }
 
-func TestMarshalJson(t *testing.T) {
+func TestMarshalJSON(t *testing.T) {
 	j, _ := cidCid.MarshalJSON()
+	t.Log(string(j))
 	if len(j) != cap(j) {
 		t.Fatalf("len %d, cap %d", len(j), cap(j))
 	}

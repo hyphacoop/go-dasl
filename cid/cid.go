@@ -342,26 +342,24 @@ func (c Cid) MarshalCBOR() ([]byte, error) {
 }
 
 // MarshalJSON fulfills the json.Marshaler interface.
-// It follows the dag-json standard: {"/": "bafkr..."}
+// It follows the ATproto standard: {"$link": "bafkr..."}
 //
 // This is just for simple display purposes.
 func (c Cid) MarshalJSON() ([]byte, error) {
 	if !c.Defined() {
 		return nil, ErrUndefinedCid
 	}
-	// Pre-calculate buffer size: {"/": + opening quote + CID string + closing quote + }
-	// CID string length = 1 (multibase prefix 'b') + base32 encoded length
-	cidLen := 1 + multibaseBase32.EncodedLen(len(c.b))
-	bufLen := 6 + cidLen + 2 // {"/": + } = 6, plus quotes for CID
+	// Pre-calculate buffer size: {"$link": + opening quote + CID string + closing quote + }
+	bufLen := len(`{"$link":}`) + CidStrLength + 2 // 2 is the CID quotes
 
 	buf := make([]byte, 0, bufLen)
-	buf = append(buf, `{"/":"`...)
+	buf = append(buf, `{"$link":"`...)
 
 	// Inline the string encoding to avoid c.String() allocation
 	buf = append(buf, 'b')
 	// Encode directly into the buffer
 	oldLen := len(buf)
-	buf = buf[:oldLen+cidLen-1]
+	buf = buf[:oldLen+CidStrLength-1] // -1 because 'b' was already added
 	multibaseBase32.Encode(buf[oldLen:], c.b[:])
 
 	buf = append(buf, `"}`...)
