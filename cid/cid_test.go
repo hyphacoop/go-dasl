@@ -155,7 +155,7 @@ func TestJson(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(j) != `{"/":"bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4"}` {
+	if string(j) != `{"$link":"bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4"}` {
 		t.Fatalf("bad json: %s", j)
 	}
 }
