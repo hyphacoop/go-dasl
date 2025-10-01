@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/base32"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -424,6 +425,26 @@ func (c *Cid) UnmarshalCBOR(b []byte) error {
 
 	// Skip 0x00 prefix
 	parsed, err := NewCidFromBytes(cidData[1:])
+	if err != nil {
+		return err
+	}
+	*c = parsed
+	return nil
+}
+
+// UnmarshalJSON fulfills the json.Unmarshaler interface.
+// It follows the ATproto standard: {"$link": "bafkr..."}
+func (c *Cid) UnmarshalJSON(data []byte) error {
+	var obj struct {
+		Link string `json:"$link"`
+	}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return err
+	}
+	if obj.Link == "" {
+		return errors.New("missing $link field")
+	}
+	parsed, err := NewCidFromString(obj.Link)
 	if err != nil {
 		return err
 	}
