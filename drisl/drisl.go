@@ -404,7 +404,7 @@ type EncOptions struct {
 type EncMode interface {
 	Marshal(v any) ([]byte, error)
 
-	// NewEncoder returns a new encoder that writes to w using the default encoding options.
+	// NewEncoder returns a new encoder that writes to w.
 	//
 	// That encoder has methods for creating indefinite length items, but they will
 	// all return an error because indefinite items are disabled in DRISL.
