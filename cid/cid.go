@@ -6,15 +6,18 @@ https://dasl.ing/cid.html
 package cid
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base32"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 
 	"github.com/hyphacoop/cbor/v2"
+	"lukechampine.com/blake3"
 )
 
 // Codec is the encoding of the data represented by the CID.
@@ -260,6 +263,15 @@ func HashBytes(b []byte) Cid {
 	return cid
 }
 
+// HashBytesBlake3 creates a raw BLAKE3 CID by hashing the provided bytes.
+func HashBytesBlake3(b []byte) Cid {
+	digest := blake3.Sum256(b)
+	// Quick version of NewCidFromInfo
+	cid := Cid{[CidBinaryLength]byte{CidVersion, byte(CodecRaw), byte(HashTypeBlake3), HashSize}}
+	copy(cid.b[dgIdx:], digest[:])
+	return cid
+}
+
 // HashReader creates a raw SHA-256 CID by hashing all the data in the reader.
 // Any error returned comes from the reader.
 func HashReader(r io.Reader) (Cid, error) {
@@ -271,6 +283,52 @@ func HashReader(r io.Reader) (Cid, error) {
 	cid := Cid{[CidBinaryLength]byte{CidVersion, byte(CodecRaw), byte(HashTypeSha256), HashSize}}
 	copy(cid.b[dgIdx:], hasher.Sum(nil))
 	return cid, nil
+}
+
+// HashReaderBlake3 creates a raw Blake3 CID by hashing all the data in the reader.
+// Any error returned comes from the reader.
+func HashReaderBlake3(r io.Reader) (Cid, error) {
+	hasher := blake3.New(HashSize, nil)
+	if _, err := io.Copy(hasher, r); err != nil {
+		return Cid{}, err
+	}
+	// Quick version of NewCidFromInfo
+	cid := Cid{[CidBinaryLength]byte{CidVersion, byte(CodecRaw), byte(HashTypeBlake3), HashSize}}
+	copy(cid.b[dgIdx:], hasher.Sum(nil))
+	return cid, nil
+}
+
+// VerifyBytes checks whether the provided bytes match the hash digest in the CID.
+// The codec information is not checked.
+func (c Cid) VerifyBytes(b []byte) bool {
+	var digest [HashSize]byte
+	if c.HashType() == HashTypeSha256 {
+		digest = sha256.Sum256(b)
+	} else {
+		digest = blake3.Sum256(b)
+	}
+	return bytes.Equal(c.b[dgIdx:], digest[:])
+}
+
+// VerifyReader checks whether the provided reader data matches the hash digest in the CID.
+// The codec information is not checked.
+func (c Cid) VerifyReader(r io.Reader) (bool, error) {
+	hasher := c.Hasher()
+	if _, err := io.Copy(hasher, r); err != nil {
+		return false, err
+	}
+	return bytes.Equal(c.b[dgIdx:], hasher.Sum(nil)), nil
+}
+
+// Hasher returns a new appropriate hash interface based on the hash type of the CID.
+//
+// This could be used to hash some data and compare against the CID digest, although
+// note VerifyBytes and VerifyReader already do that.
+func (c Cid) Hasher() hash.Hash {
+	if c.HashType() == HashTypeSha256 {
+		return sha256.New()
+	}
+	return blake3.New(HashSize, nil)
 }
 
 // Bytes returns the CID in binary format.

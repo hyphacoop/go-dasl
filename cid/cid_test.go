@@ -214,3 +214,9 @@ func TestDefined(t *testing.T) {
 		t.Errorf("MarshalBinary succeeded for zero value Cid")
 	}
 }
+
+func TestVerifyBytes(t *testing.T) {
+	if !cid.HashBytes([]byte("foo")).VerifyBytes([]byte("foo")) {
+		t.Errorf("HashBytes -> VerifyBytes is broken")
+	}
+}
