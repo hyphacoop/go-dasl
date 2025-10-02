@@ -2,6 +2,8 @@ package drisl_test
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
 	"testing"
 
@@ -106,5 +108,33 @@ func BenchmarkUnmarshalTwitterCid(b *testing.B) {
 	for b.Loop() {
 		var v any
 		drisl.Unmarshal(marshaled, &v)
+	}
+}
+
+func BenchmarkUnmarshalBluesky(b *testing.B) {
+	f, err := os.Open("/tmp/firehose.bin")
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			b.Skip("/tmp/firehose.bin not found")
+		}
+		panic(err)
+	}
+	defer f.Close()
+	fi, err := f.Stat()
+	if err != nil {
+		panic(err)
+	}
+	b.SetBytes(fi.Size())
+	for b.Loop() {
+		f.Seek(0, 0)
+		decoder := drisl.NewDecoder(f)
+		// Read the whole file for each test
+		for {
+			var v any
+			err := decoder.Decode(&v)
+			if err == io.EOF {
+				break
+			}
+		}
 	}
 }

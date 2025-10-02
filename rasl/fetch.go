@@ -135,7 +135,8 @@ func (vr *verifyReader) Read(p []byte) (n int, err error) {
 	if err == io.EOF {
 		// All bytes have been read
 		// Check hash and report
-		if !bytes.Equal(vr.cid.Digest(), vr.hasher.Sum(nil)) {
+		dgst := vr.cid.Digest()
+		if !bytes.Equal(dgst[:], vr.hasher.Sum(nil)) {
 			return 0, ErrCidValidation
 		}
 	}

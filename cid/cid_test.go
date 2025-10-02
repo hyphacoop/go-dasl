@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"io"
 	"os"
 	"testing"
@@ -16,7 +17,7 @@ import (
 var (
 	cidStr    = "bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4"
 	cidBytes  = hexDecode("01551220adee2e8fb5459c9bcf07d7d78d1183bf40a7f60f57a54a19194801c9a27ead87")
-	cidDigest = hexDecode("adee2e8fb5459c9bcf07d7d78d1183bf40a7f60f57a54a19194801c9a27ead87")
+	cidDigest = *(*[32]byte)(hexDecode("adee2e8fb5459c9bcf07d7d78d1183bf40a7f60f57a54a19194801c9a27ead87"))
 	cidCid    = MustCid(cidStr)
 )
 
@@ -44,7 +45,7 @@ func TestNewCidFromString(t *testing.T) {
 	if c.String() != cidStr {
 		t.Fatalf("want %s, got %s", cidStr, c.String())
 	}
-	if !bytes.Equal(c.Bytes(), cidBytes) {
+	if !bytes.Equal(c.Bytes()[:], cidBytes) {
 		t.Fatalf("want %x, got %x", cidBytes, c.Bytes())
 	}
 }
@@ -118,14 +119,104 @@ func TestNewCidFromInfo(t *testing.T) {
 	}
 }
 
-func TestHashSize(t *testing.T) {
-	if cidCid.HashSize() != 32 {
-		t.Errorf(".HashSize() = %d, want 32", cidCid.HashSize())
+func TestDigest(t *testing.T) {
+	digest := cidCid.Digest()
+	if digest != cidDigest {
+		t.Errorf(".Digest() = %x, want %x", cidCid.Digest(), cidDigest)
 	}
 }
 
-func TestDigest(t *testing.T) {
-	if !bytes.Equal(cidCid.Digest(), cidDigest) {
-		t.Errorf(".Digest() = %x, want %x", cidCid.Digest(), cidDigest)
+func TestEmptyCid(t *testing.T) {
+	if !bytes.Equal(cid.EmptyCid.Bytes()[:], hexDecode("01551220e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")) {
+		t.Errorf("EmptyCid has bad data")
+	}
+}
+
+func TestUnmarshalText(t *testing.T) {
+	var c cid.Cid
+	err := c.UnmarshalText([]byte(cidStr))
+	if err != nil {
+		t.Error(err)
+	} else if c.String() != cidStr {
+		t.Fatalf("want %s, got %s", cidStr, c.String())
+	}
+}
+
+func TestBinary(t *testing.T) {
+	b, _ := cidCid.MarshalBinary()
+	b2, _ := cidCid.AppendBinary(nil)
+	if !bytes.Equal(b, b2) {
+		t.Errorf("MarshalBinary and AppendBinary are not equal: %x - %x", b, b2)
+	}
+}
+
+func TestJson(t *testing.T) {
+	j, err := json.Marshal(cidCid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(j) != `{"$link":"bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4"}` {
+		t.Fatalf("bad json: %s", j)
+	}
+}
+
+func TestMarshalJSON(t *testing.T) {
+	j, _ := cidCid.MarshalJSON()
+	t.Log(string(j))
+	if len(j) != cap(j) {
+		t.Fatalf("len %d, cap %d", len(j), cap(j))
+	}
+}
+
+func TestUnmarshalJSON(t *testing.T) {
+	jsonData := `{"$link":"bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4"}`
+	var c cid.Cid
+	err := json.Unmarshal([]byte(jsonData), &c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.String() != cidStr {
+		t.Fatalf("want %s, got %s", cidStr, c.String())
+	}
+
+	// Test with missing $link field
+	invalidJSON := `{"other":"value"}`
+	var c2 cid.Cid
+	err = json.Unmarshal([]byte(invalidJSON), &c2)
+	if err == nil {
+		t.Fatal("expected error for missing $link field")
+	}
+
+	// Test with invalid CID
+	invalidCidJSON := `{"$link":"invalid-cid"}`
+	var c3 cid.Cid
+	err = json.Unmarshal([]byte(invalidCidJSON), &c3)
+	if err == nil {
+		t.Fatal("expected error for invalid CID")
+	}
+}
+
+func TestDefined(t *testing.T) {
+	var c cid.Cid
+	if c.Defined() {
+		t.Errorf("Defined = true for zero value Cid")
+	}
+	if _, err := c.MarshalCBOR(); err == nil {
+		t.Errorf("MarshalCBOR succeeded for zero value Cid")
+	}
+	if _, err := c.MarshalJSON(); err == nil {
+		t.Errorf("MarshalJSON succeeded for zero value Cid")
+	}
+	if _, err := c.MarshalText(); err == nil {
+		t.Errorf("MarshalText succeeded for zero value Cid")
+	}
+	if _, err := c.MarshalBinary(); err == nil {
+		t.Errorf("MarshalBinary succeeded for zero value Cid")
+	}
+}
+
+func TestVerifyBytes(t *testing.T) {
+	if !cid.HashBytes([]byte("foo")).VerifyBytes([]byte("foo")) {
+		t.Errorf("HashBytes -> VerifyBytes is broken")
 	}
 }

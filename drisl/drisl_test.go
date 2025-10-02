@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
+	"math"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -478,5 +480,113 @@ func TestNoFloatsUnmarshal(t *testing.T) {
 	err := dec.Unmarshal(hexDecode("fb3ff8000000000000"), &v)
 	if err == nil {
 		t.Fatalf("want error")
+	}
+}
+
+type testStruct struct {
+	A int
+}
+
+func TestDisallowUnknownFields(t *testing.T) {
+	var v testStruct
+	dec, _ := drisl.DecOptions{DisallowUnknownFields: true}.DecMode()
+	err := dec.Unmarshal(hexDecode("a2614100614200"), &v)
+	t.Log(err)
+	if err == nil {
+		t.Fatal("want error")
+	}
+}
+
+func TestDisallowUnknownFields2(t *testing.T) {
+	var v testStruct
+	dec, _ := drisl.DecOptions{DisallowUnknownFields: true}.DecMode()
+	err := dec.Unmarshal(hexDecode("a1614100"), &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAllowUndefined(t *testing.T) {
+	dec, _ := drisl.DecOptions{AllowUndefined: true}.DecMode()
+	var v any
+	err := dec.Unmarshal([]byte{0xf7}, &v)
+	if err != nil || v != nil {
+		t.Errorf("Unmarshal(undefined) when allowed = %v, %v", v, err)
+	}
+}
+
+func TestInt64RangeOnlyUnmarshal(t *testing.T) {
+	dec, _ := drisl.DecOptions{Int64RangeOnly: true}.DecMode()
+	var v any
+	err := dec.Unmarshal(hexDecode("1b8000000000000000"), &v)
+	t.Log(err)
+	if err == nil {
+		t.Error("int64 range not obeyed")
+	}
+}
+
+func TestInt64RangeOnlyMarshal(t *testing.T) {
+	enc, _ := drisl.EncOptions{Int64RangeOnly: true}.EncMode()
+	var i uint64 = math.MaxInt64 + 1
+	b, err := enc.Marshal(i)
+	t.Log(err)
+	if err == nil {
+		t.Errorf("Marshal int64 range = %x", b)
+	}
+}
+
+func TestTimeOptMarshal(t *testing.T) {
+	enc, _ := drisl.EncOptions{Time: drisl.TimeUnix}.EncMode()
+	b, err := enc.Marshal(time.Unix(0, 0))
+	if err != nil {
+		t.Fatalf("Marshal unix time: %v", err)
+	}
+	if !bytes.Equal(b, hexDecode("00")) {
+		t.Errorf("Marshal unix time: got %x want 00", b)
+	}
+	t.Logf("%x", b)
+}
+
+func TestTimeUnixUnmarshal(t *testing.T) {
+	var i time.Time
+	err := drisl.Unmarshal([]byte{0}, &i)
+	if err != nil {
+		t.Error(err)
+	}
+	if !i.Equal(time.Unix(0, 0)) {
+		t.Errorf("got %v want %v", time.Unix(0, 0), i)
+	}
+}
+
+func TestEncoderIndefinite(t *testing.T) {
+	enc := drisl.NewEncoder(io.Discard)
+	if err := enc.StartIndefiniteArray(); err == nil {
+		t.Errorf("Encoder indefinite succeeded")
+	}
+}
+
+func TestEncoder(t *testing.T) {
+	// Just a simple sanity check the encoder works
+	var buf bytes.Buffer
+	enc := drisl.NewEncoder(&buf)
+	enc.Encode(1)
+	enc.Encode(1)
+	if !bytes.Equal(buf.Bytes(), []byte{0x01, 0x01}) {
+		t.Errorf("Encoder(0, 0) = %x", buf.Bytes())
+	}
+}
+
+func TestDecoder(t *testing.T) {
+	// Sanity check decoder
+	buf := bytes.NewReader([]byte{0x01, 0x01})
+	dec := drisl.NewDecoder(buf)
+	var v any
+	err := dec.Decode(&v)
+	if err != nil || v.(uint64) != 1 {
+		t.Errorf("Decode(0x0101) = %v, %v", v, err)
+	}
+	err = dec.Decode(&v)
+	if err != nil || v.(uint64) != 1 {
+		t.Errorf("Decode(0x01) = %v, %v", v, err)
 	}
 }

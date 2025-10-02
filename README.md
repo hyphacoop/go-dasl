@@ -2,7 +2,10 @@
 
 A Go reference library for [DASL](https://dasl.ing).
 
-🚧 Not ready for production yet 🚧
+## Project Status (Sep 2025)
+
+This project is active and works well. Breaking changes will still occur, but you can use it today.
+Production use cases are recommended to wait until the API settles, by v1 at the latest.
 
 ## Usage
 
@@ -59,12 +62,34 @@ Struct tags automatically reduce encoded size of structs and improve speed.
 
 We can write less code by using struct tag options:
 - `toarray`: encode without field names (decode back to original struct)
-- `omitempty`: omit empty field when encoding
-- `omitzero`: omit zero-value field when encoding
+- `omitempty`: omit empty field when encoding (same rules as encoding/json)
+- `omitzero`: omit zero-value field when encoding (same rules as encoding/json)
 
 As a special case, struct field tag "-" omits the field.
 
 NOTE: When a struct uses `toarray`, the encoder will ignore `omitempty` and `omitzero` to prevent position of encoded array elements from changing. This allows decoder to match encoded elements to their Go struct field.
+
+Example usage:
+
+```go
+type myData struct {
+    // Convert struct fields to CBOR array to reduce size
+    _       struct{} `cbor:",toarray"`
+    Payload []byte
+    Age     int
+    Name    string
+    // Etc
+}
+
+// Use omitempty and field naming
+type myData2 struct {
+    Payload []byte
+    Age     int    `cbor:",omitempty"`
+    Name    string `cbor:"my_name"`
+    Secret []byte  `cbor:"-"`         // Skip
+    Ref    cid.Cid `cbor:",omitzero"` // Use omitzero (if needed) for CIDs
+}
+```
 
 ## Submodules
 
@@ -72,8 +97,8 @@ DASL has many specs, only some of which are implemented here.
 
 - DRISL (dag-cbor): implemented
 - CID: implemented (including BDASL)
-- RASL: stretch goal
-- MASL: stretch goal
+- RASL: in progress
+- MASL: in progress
 - CAR: currently out of scope
 
 ## Versioning
@@ -83,6 +108,9 @@ This library follows [Semantic Versioning](https://semver.org/).
 - Pre-release versions (like x.y.z-alpha) are not intended to be used by the public
 - Zero versions (0.y.z) are ready to use, but may have breaking changes
 - 1.0.0 will be released once the DRISL and CID specs have been finalized
+
+Some submodules may be documented as experimental, which would allow for breaking changes
+even in minor versions.
 
 ## Funding
 

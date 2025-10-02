@@ -62,3 +62,15 @@ jobs:
           go-version: 'stable'
       - name: Fuzz unmarshaler
         run: go test -fuzz='^FuzzUnmarshaler$' -run='^FuzzUnmarshaler$' -fuzztime=5m ./drisl
+  fuzz5:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+      - name: Fuzz decoder
+        run: go test -fuzz='^FuzzDecoder$' -run='^FuzzDecoder$' -fuzztime=5m ./drisl

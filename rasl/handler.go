@@ -192,7 +192,7 @@ func DirectoryHandler(dir string, hashBlake3 bool) (http.Handler, error) {
 					hasherSha256 := sha256.New()
 					var hasherBlake3 hash.Hash
 					if hashBlake3 {
-						hasherBlake3 = blake3.New(cid.HashLength, nil)
+						hasherBlake3 = blake3.New(cid.HashSize, nil)
 						w = io.MultiWriter(hasherSha256, hasherBlake3)
 					} else {
 						w = hasherSha256
@@ -263,10 +263,10 @@ outer:
 				return nil, err
 			}
 		case r := <-retCh:
-			c, _ := cid.NewCidFromInfo(cid.CodecRaw, cid.HashTypeSha256, r.digestSha256)
+			c, _ := cid.NewCidFromInfo(cid.CodecRaw, cid.HashTypeSha256, [32]byte(r.digestSha256))
 			cidPaths[c.String()] = r.path
 			if hashBlake3 {
-				c, _ := cid.NewCidFromInfo(cid.CodecRaw, cid.HashTypeBlake3, r.digestBlake3)
+				c, _ := cid.NewCidFromInfo(cid.CodecRaw, cid.HashTypeBlake3, [32]byte(r.digestBlake3))
 				cidPaths[c.String()] = r.path
 			}
 		}

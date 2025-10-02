@@ -9,15 +9,14 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/base32"
-	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
 	"io"
 
 	"github.com/hyphacoop/cbor/v2"
-	"github.com/multiformats/go-varint"
 	"lukechampine.com/blake3"
 )
 
@@ -28,7 +27,13 @@ type Codec byte
 type HashType byte
 
 const (
-	minCidLength = 4
+	// All DASL CIDs are 36 bytes long
+	// 4 header bytes + 32 hash digest bytes
+	CidBinaryLength = 36
+
+	// Encoded as a base32 string it is 58 bytes, plus the 'b' prefix.
+	CidStrLength = 59
+
 	cidTagNumber = 42
 
 	CidVersion              = 0x01
@@ -37,8 +42,12 @@ const (
 	HashTypeSha256 HashType = 0x12
 	HashTypeBlake3 HashType = 0x1e
 
-	// The usual hash length
-	HashLength = 32
+	// The hash digest length
+	HashSize = 32
+
+	// The hash digest starts on the 5th byte (index 4)
+	// After version, codec, hash type, hash size
+	dgIdx = 4
 )
 
 var (
@@ -50,7 +59,9 @@ var (
 	// EmptyCid is a raw SHA-256 CID that represents no data.
 	// Its digest is the SHA-256 hash of the empty byte string "".
 	// Try not to use it as a sentinel value.
-	EmptyCid = Cid{b: hexDecode("01551220e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")}
+	EmptyCid = Cid{b: *(*[CidBinaryLength]byte)(hexDecode("01551220e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))}
+
+	ErrUndefinedCid = errors.New("go-dasl/cid: cannot marshal nil Cid (use omitzero over omitempty)")
 )
 
 func hexDecode(s string) []byte {
@@ -71,16 +82,25 @@ func (e *ForbiddenCidError) Error() string {
 }
 
 // Cid is a DASL CID.
+//
 // It is always valid, unless created directly such as cid.Cid{} or new(cid.Cid).
-// That will cause panics if methods are called upon it, unless otherwise documented.
+// That will cause invalid output if methods are called upon it, unless otherwise documented.
+// Marshal methods like MarshalBinary can return errors, and so will check for this
+// and return UndefinedCidError instead of panicing or encoding an invalid CID.
+//
+// Programs using CIDs should typically store and pass them as values, not pointers.
+// That is, CID variables and struct fields should be of type cid.Cid, not *cid.Cid.
+//
+// If you want to omit empty CID values from being encoded, use the omitzero struct
+// tag instead of omitempty.
 //
 // https://dasl.ing/cid.html
 type Cid struct {
 	// b is the binary CID data
-	b []byte
+	b [CidBinaryLength]byte
 }
 
-// NewCidFromBytes creates a new DASL CID from the given bytes.
+// NewCidFromBytes parses a binary DASL CID.
 // A ForbiddenCidError is returned if it is invalid in any way.
 //
 // Note this is not the same as the bytes for a CID encoded in DRISL (CBOR).
@@ -89,8 +109,8 @@ type Cid struct {
 func NewCidFromBytes(in []byte) (Cid, error) {
 	// Follow these steps:
 	// https://dasl.ing/cid.html
-	if len(in) < minCidLength {
-		return Cid{}, &ForbiddenCidError{"too few bytes"}
+	if len(in) != CidBinaryLength {
+		return Cid{}, &ForbiddenCidError{"invalid length"}
 	}
 	if in[0] != CidVersion {
 		return Cid{}, &ForbiddenCidError{"invalid version"}
@@ -101,18 +121,15 @@ func NewCidFromBytes(in []byte) (Cid, error) {
 	if in[2] != byte(HashTypeSha256) && in[2] != byte(HashTypeBlake3) {
 		return Cid{}, &ForbiddenCidError{"invalid hash type"}
 	}
-	hashSize, idx, err := varint.FromUvarint(in[3:])
-	if err != nil {
-		return Cid{}, &ForbiddenCidError{err.Error()}
-	}
-	idx += 3 // Index of `in` where the hash starts
-	if len(in[idx:]) != int(hashSize) {
-		return Cid{}, &ForbiddenCidError{"remaining data doesn't match stated hash size"}
+	if in[3] != HashSize {
+		return Cid{}, &ForbiddenCidError{"invalid hash size"}
 	}
 
+	// Remaining data is hash digest. It's length is already verified.
+
 	// Create Cid, copying input data so it can't be changed by the caller
-	b := make([]byte, len(in))
-	copy(b, in)
+	var b [CidBinaryLength]byte
+	copy(b[:], in)
 	return Cid{b}, nil
 }
 
@@ -121,7 +138,7 @@ type ReadByteReader interface {
 	io.ByteReader
 }
 
-// NewCidFromReader reads a binary DASL CID from the given reader.
+// NewCidFromReader parses a binary DASL CID from the given reader.
 // A ForbiddenCidError is returned if it is invalid in any way.
 // Extra data after the CID is allowed.
 //
@@ -137,7 +154,7 @@ func NewCidFromReader(r ReadByteReader) (Cid, error) {
 		return e
 	}
 
-	cid := Cid{b: make([]byte, 0, minCidLength)}
+	cid := Cid{}
 
 	b, err := r.ReadByte()
 	if err != nil {
@@ -146,7 +163,7 @@ func NewCidFromReader(r ReadByteReader) (Cid, error) {
 	if b != CidVersion {
 		return Cid{}, &ForbiddenCidError{"invalid version"}
 	}
-	cid.b = append(cid.b, b)
+	cid.b[0] = b
 
 	b, err = r.ReadByte()
 	if err != nil {
@@ -155,7 +172,7 @@ func NewCidFromReader(r ReadByteReader) (Cid, error) {
 	if b != byte(CodecRaw) && b != byte(CodecDrisl) {
 		return Cid{}, &ForbiddenCidError{"invalid codec"}
 	}
-	cid.b = append(cid.b, b)
+	cid.b[1] = b
 
 	b, err = r.ReadByte()
 	if err != nil {
@@ -164,32 +181,32 @@ func NewCidFromReader(r ReadByteReader) (Cid, error) {
 	if b != byte(HashTypeSha256) && b != byte(HashTypeBlake3) {
 		return Cid{}, &ForbiddenCidError{"invalid hash type"}
 	}
-	cid.b = append(cid.b, b)
+	cid.b[2] = b
 
-	hashSize, bs, err := readUvarint(r)
+	b, err = r.ReadByte()
 	if err != nil {
-		if err == io.ErrUnexpectedEOF {
-			return Cid{}, err
-		}
-		return Cid{}, &ForbiddenCidError{err.Error()}
+		return Cid{}, fixErr(err)
 	}
-	cid.b = append(cid.b, bs...)
+	if b != HashSize {
+		return Cid{}, &ForbiddenCidError{"invalid hash size"}
+	}
+	cid.b[3] = b
 
-	digest := make([]byte, hashSize)
+	digest := make([]byte, HashSize)
 	_, err = io.ReadFull(r, digest)
 	if err != nil {
 		return Cid{}, fixErr(err)
 	}
-	cid.b = append(cid.b, digest...)
+	copy(cid.b[dgIdx:], digest)
 
 	return cid, nil
 }
 
-// NewCidFromString creates a new DASL CID from the given string.
+// NewCidFromString parses a string DASL CID.
 // A ForbiddenCidError is returned if it is invalid DASL.
 func NewCidFromString(s string) (Cid, error) {
-	if len(s) == 0 {
-		return Cid{}, &ForbiddenCidError{"empty"}
+	if len(s) != CidStrLength {
+		return Cid{}, &ForbiddenCidError{"invalid length"}
 	}
 	if s[0] != 'b' {
 		return Cid{}, &ForbiddenCidError{"not base32 encoded"}
@@ -203,26 +220,20 @@ func NewCidFromString(s string) (Cid, error) {
 
 // NewCidFromInfo creates a DASL CID manually from the codec, hash type, and hash digest.
 // An error is only returned if the codec or hashType provided don't conform to DASL.
-// Currently the length of the digest is not validated.
-func NewCidFromInfo(codec Codec, hashType HashType, digest []byte) (Cid, error) {
+func NewCidFromInfo(codec Codec, hashType HashType, digest [HashSize]byte) (Cid, error) {
 	if codec != CodecRaw && codec != CodecDrisl {
 		return Cid{}, &ForbiddenCidError{"invalid codec"}
 	}
 	if hashType != HashTypeSha256 && hashType != HashTypeBlake3 {
 		return Cid{}, &ForbiddenCidError{"invalid hash type"}
 	}
-	b := make([]byte, 3, 4+len(digest)) // Assume hash size varint is 1 byte long
-	b[0] = CidVersion
-	b[1] = byte(codec)
-	b[2] = byte(hashType)
-
-	// Go slice size limits prevent this varint from being larger than the max allowed by
-	// the IPFS unsigned-varint spec: https://github.com/multiformats/unsigned-varint
-	// So I can just add it and move on
-	b = binary.AppendUvarint(b, uint64(len(digest)))
-
-	b = append(b, digest...)
-	return Cid{b}, nil
+	cid := Cid{}
+	cid.b[0] = CidVersion
+	cid.b[1] = byte(codec)
+	cid.b[2] = byte(hashType)
+	cid.b[3] = HashSize
+	copy(cid.b[dgIdx:], digest[:])
+	return cid, nil
 }
 
 // MustNewCidFromString calls NewCidFromString and panics if it returns an error.
@@ -247,14 +258,18 @@ func MustNewCidFromBytes(b []byte) Cid {
 func HashBytes(b []byte) Cid {
 	digest := sha256.Sum256(b)
 	// Quick version of NewCidFromInfo
-	return Cid{append([]byte{CidVersion, byte(CodecRaw), byte(HashTypeSha256), HashLength}, digest[:]...)}
+	cid := Cid{[CidBinaryLength]byte{CidVersion, byte(CodecRaw), byte(HashTypeSha256), HashSize}}
+	copy(cid.b[dgIdx:], digest[:])
+	return cid
 }
 
 // HashBytesBlake3 creates a raw BLAKE3 CID by hashing the provided bytes.
 func HashBytesBlake3(b []byte) Cid {
 	digest := blake3.Sum256(b)
 	// Quick version of NewCidFromInfo
-	return Cid{append([]byte{CidVersion, byte(CodecRaw), byte(HashTypeBlake3), HashLength}, digest[:]...)}
+	cid := Cid{[CidBinaryLength]byte{CidVersion, byte(CodecRaw), byte(HashTypeBlake3), HashSize}}
+	copy(cid.b[dgIdx:], digest[:])
+	return cid
 }
 
 // HashReader creates a raw SHA-256 CID by hashing all the data in the reader.
@@ -265,30 +280,34 @@ func HashReader(r io.Reader) (Cid, error) {
 		return Cid{}, err
 	}
 	// Quick version of NewCidFromInfo
-	return Cid{append([]byte{CidVersion, byte(CodecRaw), byte(HashTypeSha256), HashLength}, hasher.Sum(nil)...)}, nil
+	cid := Cid{[CidBinaryLength]byte{CidVersion, byte(CodecRaw), byte(HashTypeSha256), HashSize}}
+	copy(cid.b[dgIdx:], hasher.Sum(nil))
+	return cid, nil
 }
 
 // HashReaderBlake3 creates a raw Blake3 CID by hashing all the data in the reader.
 // Any error returned comes from the reader.
 func HashReaderBlake3(r io.Reader) (Cid, error) {
-	hasher := blake3.New(HashLength, nil)
+	hasher := blake3.New(HashSize, nil)
 	if _, err := io.Copy(hasher, r); err != nil {
 		return Cid{}, err
 	}
 	// Quick version of NewCidFromInfo
-	return Cid{append([]byte{CidVersion, byte(CodecRaw), byte(HashTypeBlake3), HashLength}, hasher.Sum(nil)...)}, nil
+	cid := Cid{[CidBinaryLength]byte{CidVersion, byte(CodecRaw), byte(HashTypeBlake3), HashSize}}
+	copy(cid.b[dgIdx:], hasher.Sum(nil))
+	return cid, nil
 }
 
 // VerifyBytes checks whether the provided bytes match the hash digest in the CID.
 // The codec information is not checked.
 func (c Cid) VerifyBytes(b []byte) bool {
-	var digest [HashLength]byte
+	var digest [HashSize]byte
 	if c.HashType() == HashTypeSha256 {
 		digest = sha256.Sum256(b)
 	} else {
 		digest = blake3.Sum256(b)
 	}
-	return bytes.Equal(c.Digest(), digest[:])
+	return bytes.Equal(c.b[dgIdx:], digest[:])
 }
 
 // VerifyReader checks whether the provided reader data matches the hash digest in the CID.
@@ -298,7 +317,7 @@ func (c Cid) VerifyReader(r io.Reader) (bool, error) {
 	if _, err := io.Copy(hasher, r); err != nil {
 		return false, err
 	}
-	return bytes.Equal(c.Digest(), hasher.Sum(nil)), nil
+	return bytes.Equal(c.b[dgIdx:], hasher.Sum(nil)), nil
 }
 
 // Hasher returns a new appropriate hash interface based on the hash type of the CID.
@@ -309,32 +328,35 @@ func (c Cid) Hasher() hash.Hash {
 	if c.HashType() == HashTypeSha256 {
 		return sha256.New()
 	}
-	return blake3.New(HashLength, nil)
+	return blake3.New(HashSize, nil)
 }
 
 // Bytes returns the CID in binary format.
-// It is safe to modify.
-// Note this is not the representation used in DRISL (CBOR)
+// It is safe to modify. It is always CidBinaryLength bytes long.
+// Note this is not the representation used in DRISL (CBOR).
 func (c Cid) Bytes() []byte {
-	b := make([]byte, len(c.b))
-	copy(b, c.b)
+	// Slice returned over array for user convenience.
+	// Writing to files, etc.
+	b := make([]byte, CidBinaryLength)
+	copy(b, c.b[:])
 	return b
 }
 
 // String returns the CID in string format.
+// It will always be CidStrLength bytes (or ASCII characters) long.
 func (c Cid) String() string {
-	s := multibaseBase32.EncodeToString(c.b)
-	return "b" + s
+	s, _ := c.MarshalText()
+	return string(s)
 }
 
-// Equals returns true if the two CIDs are exactly the same.
+// Equal returns true if the two CIDs are exactly the same.
 //
 // CIDs with the same hash type and digest but different codecs are not considered equal.
 //
 // This is equivalent to comparing the .Bytes() or .String() output of two CIDs,
 // but more efficient.
-func (c Cid) Equals(o Cid) bool {
-	return bytes.Equal(c.b, o.b)
+func (c Cid) Equal(o Cid) bool {
+	return c.b == o.b
 }
 
 // Codec returns the codec of the CID.
@@ -347,29 +369,12 @@ func (c Cid) HashType() HashType {
 	return HashType(c.b[2])
 }
 
-// HashSize returns the size of the hash digest stored in the CID.
-func (c Cid) HashSize() uint64 {
-	// TODO: optimize this and the next func?
-	// By extracting hash digest/size/index or something on creation
-
-	// Skip version, codec, hash type
-	size, _, _ := varint.FromUvarint(c.b[3:])
-	return size
-}
-
 // Digest returns the hash digest stored in the CID.
 // It is safe to modify.
-func (c Cid) Digest() []byte {
-	// Move past varint to get start of digest
-	i := 3 // Skip version, codec, hash type
-	for c.b[i] > 0x80 {
-		i++
-	}
-	i++ // Skip last byte of varint
-
+func (c Cid) Digest() [HashSize]byte {
 	// Copy digest into new slice for safety and return
-	digest := make([]byte, len(c.b)-i)
-	copy(digest, c.b[i:])
+	var digest [HashSize]byte
+	copy(digest[:], c.b[dgIdx:])
 	return digest
 }
 
@@ -377,20 +382,77 @@ func (c Cid) Digest() []byte {
 // cid.Cid{} or new(cid.Cid).
 // This method shouldn't be needed as long as you don't do this.
 func (c Cid) Defined() bool {
-	return c.b != nil
+	// Assume it's all zeros
+	return c.b[0] != 0
 }
 
 // MarshalCBOR fulfills the drisl.Marshaler interface.
-// It does not panic if the Cid is nil or empty, instead an error is returned.
 func (c Cid) MarshalCBOR() ([]byte, error) {
-	if c.b == nil {
-		return nil, errors.New("go-dasl/cid: cannot marshal nil Cid")
+	if !c.Defined() {
+		return nil, ErrUndefinedCid
 	}
-	// CID in CBOR is just CID bytes with 0x00 prepended
-	return cbor.Marshal(cbor.Tag{
-		Number:  cidTagNumber,
-		Content: append([]byte{0x00}, c.b...),
-	})
+	// Just return raw bytes instead of calling Marshal, because the header
+	// is the same every time.
+	return append([]byte{
+		0xd8, 0x2a, // Tag 42
+		0x58, 0x25, // 37 bytes
+		0x00, // CID in CBOR prefix
+	}, c.b[:]...), nil
+}
+
+// MarshalJSON fulfills the json.Marshaler interface.
+// It follows the ATproto standard: {"$link": "bafkr..."}
+//
+// This is just for simple display purposes.
+func (c Cid) MarshalJSON() ([]byte, error) {
+	if !c.Defined() {
+		return nil, ErrUndefinedCid
+	}
+	// Pre-calculate buffer size: {"$link": + opening quote + CID string + closing quote + }
+	bufLen := len(`{"$link":}`) + CidStrLength + 2 // 2 is the CID quotes
+
+	buf := make([]byte, 0, bufLen)
+	buf = append(buf, `{"$link":"`...)
+
+	// Inline the string encoding to avoid c.String() allocation
+	buf = append(buf, 'b')
+	// Encode directly into the buffer
+	oldLen := len(buf)
+	buf = buf[:oldLen+CidStrLength-1] // -1 because 'b' was already added
+	multibaseBase32.Encode(buf[oldLen:], c.b[:])
+
+	buf = append(buf, `"}`...)
+	return buf, nil
+}
+
+// MarshalText fulfills the encoding.TextMarshaler interface.
+// It is equivalent to String().
+func (c Cid) MarshalText() ([]byte, error) {
+	if !c.Defined() {
+		return nil, ErrUndefinedCid
+	}
+	text := make([]byte, multibaseBase32.EncodedLen(len(c.b))+1)
+	text[0] = 'b'
+	multibaseBase32.Encode(text[1:], c.b[:])
+	return text, nil
+}
+
+// MarshalBinary fulfills the encoding.BinaryMarshaler interface.
+// It is equivalent to Bytes().
+func (c Cid) MarshalBinary() ([]byte, error) {
+	if !c.Defined() {
+		return nil, ErrUndefinedCid
+	}
+	return c.Bytes(), nil
+}
+
+// AppendBinary fulfills the encoding.BinaryAppender interface.
+// It simply appends the Bytes() output.
+func (c Cid) AppendBinary(b []byte) ([]byte, error) {
+	if !c.Defined() {
+		return nil, ErrUndefinedCid
+	}
+	return append(b, c.b[:]...), nil
 }
 
 // UnmarshalCBOR fulfills the drisl.Unmarshaler interface.
@@ -428,38 +490,44 @@ func (c *Cid) UnmarshalCBOR(b []byte) error {
 	return nil
 }
 
-// readUvarint reads a unsigned varint from the given reader.
-// Modified from go-varint v0.1.0 under MIT license.
-func readUvarint(r io.ByteReader) (uint64, []byte, error) {
-	// Modified from the go standard library. Copyright the Go Authors and
-	// released under the BSD License.
-	var x uint64
-	var s uint
-	bs := make([]byte, 0, 1)
-	for s = 0; ; s += 7 {
-		b, err := r.ReadByte()
-		if err != nil {
-			if err == io.EOF && s != 0 {
-				// "eof" will look like a success.
-				// If we've read part of a value, this is not a
-				// success.
-				err = io.ErrUnexpectedEOF
-			}
-			return 0, nil, err
-		}
-		bs = append(bs, b)
-		if (s == 56 && b >= 0x80) || s >= (7*varint.MaxLenUvarint63) {
-			// this is the 9th and last byte we're willing to read, but it
-			// signals there's more (1 in MSB).
-			// or this is the >= 10th byte, and for some reason we're still here.
-			return 0, nil, varint.ErrOverflow
-		}
-		if b < 0x80 {
-			if b == 0 && s > 0 {
-				return 0, nil, varint.ErrNotMinimal
-			}
-			return x | uint64(b)<<s, bs, nil
-		}
-		x |= uint64(b&0x7f) << s
+// UnmarshalJSON fulfills the json.Unmarshaler interface.
+// It follows the ATproto standard: {"$link": "bafkr..."}
+func (c *Cid) UnmarshalJSON(data []byte) error {
+	var obj struct {
+		Link string `json:"$link"`
 	}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return err
+	}
+	if obj.Link == "" {
+		return errors.New("missing $link field")
+	}
+	parsed, err := NewCidFromString(obj.Link)
+	if err != nil {
+		return err
+	}
+	*c = parsed
+	return nil
+}
+
+// UnmarshalText fulfills the encoding.TextUnmarshaler interface.
+// It is equivalent to NewCidFromString.
+func (c *Cid) UnmarshalText(text []byte) error {
+	parsed, err := NewCidFromString(string(text))
+	if err != nil {
+		return err
+	}
+	*c = parsed
+	return nil
+}
+
+// UnmarshalBinary fulfills the encoding.BinaryUnmarshaler interface.
+// It is equivalent to NewCidFromBytes.
+func (c *Cid) UnmarshalBinary(data []byte) error {
+	parsed, err := NewCidFromBytes(data)
+	if err != nil {
+		return err
+	}
+	*c = parsed
+	return nil
 }
