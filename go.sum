@@ -1,5 +1,5 @@
-github.com/hyphacoop/cbor/v2 v2.0.0-20250917145243-84c9e8824562 h1:/7ygHDzoQh9vnXGOlV1Elcx7We6PmM3X/jl1p/+loq8=
-github.com/hyphacoop/cbor/v2 v2.0.0-20250917145243-84c9e8824562/go.mod h1:1ny0WdocVllO4iUxV5eXuJ9vMzmZ2nITeZg7uBxVEeU=
+github.com/hyphacoop/cbor/v2 v2.0.0-20250930181352-7f3ef1e4f19c h1:abffqqU/soNeKe5JDiQspjaP4pL0VH2FLJS2oRVGR0I=
+github.com/hyphacoop/cbor/v2 v2.0.0-20250930181352-7f3ef1e4f19c/go.mod h1:1ny0WdocVllO4iUxV5eXuJ9vMzmZ2nITeZg7uBxVEeU=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 pgregory.net/rapid v1.2.0 h1:keKAYRcjm+e1F0oAuU5F5+YPAWcyxNNRK2wud503Gnk=

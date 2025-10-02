@@ -56,38 +56,53 @@ func main() {
 
 See an overview at [pkg.go.dev](https://pkg.go.dev/github.com/hyphacoop/go-dasl).
 
-### Smaller Encodings with Struct Tag Options
+### Struct Tag Options
 
-Struct tags automatically reduce encoded size of structs and improve speed.
+Struct tags provide control over encoding and decoding behavior.
 
-We can write less code by using struct tag options:
+#### Reducing Encoded Size
+
+These options automatically reduce encoded size of structs and improve speed:
 - `toarray`: encode without field names (decode back to original struct)
 - `omitempty`: omit empty field when encoding (same rules as encoding/json)
 - `omitzero`: omit zero-value field when encoding (same rules as encoding/json)
-
-As a special case, struct field tag "-" omits the field.
 
 NOTE: When a struct uses `toarray`, the encoder will ignore `omitempty` and `omitzero` to prevent position of encoded array elements from changing. This allows decoder to match encoded elements to their Go struct field.
 
 Example usage:
 
 ```go
+// Convert struct fields to CBOR array to reduce size
 type myData struct {
-    // Convert struct fields to CBOR array to reduce size
     _       struct{} `cbor:",toarray"`
     Payload []byte
     Age     int
     Name    string
-    // Etc
 }
 
-// Use omitempty and field naming
+// Use omitempty, omitzero, and field naming
 type myData2 struct {
     Payload []byte
-    Age     int    `cbor:",omitempty"`
-    Name    string `cbor:"my_name"`
-    Secret []byte  `cbor:"-"`         // Skip
-    Ref    cid.Cid `cbor:",omitzero"` // Use omitzero (if needed) for CIDs
+    Age     int     `cbor:",omitempty"`
+    Name    string  `cbor:"my_name"`
+    Ref     cid.Cid `cbor:",omitzero"` // Use omitzero (not omitempty) for CIDs
+}
+```
+
+#### Field Control
+
+- `unknown`: collect unrecognized fields during decoding into this map field
+- `-`: omit the field entirely from encoding and decoding
+
+Example usage:
+
+```go
+// Collect unknown fields for forward compatibility
+type myData3 struct {
+    ID      string         `cbor:"id"`
+    Value   int            `cbor:"value"`
+    Secret  []byte         `cbor:"-"`        // Skip this field
+    Unknown map[string]any `cbor:",unknown"` // Captures unrecognized fields
 }
 ```
 
