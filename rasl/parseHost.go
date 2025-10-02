@@ -35,41 +35,6 @@ func (e invalidHostError) Error() string {
 	return "invalid character " + strconv.Quote(string(e)) + " in host name"
 }
 
-func parseAuthority(authority string) (user *userinfo, host string, err error) {
-	i := strings.LastIndex(authority, "@")
-	if i < 0 {
-		host, err = parseHost(authority)
-	} else {
-		host, err = parseHost(authority[i+1:])
-	}
-	if err != nil {
-		return nil, "", err
-	}
-	if i < 0 {
-		return nil, host, nil
-	}
-	userinfo := authority[:i]
-	if !validUserinfo(userinfo) {
-		return nil, "", errors.New("net/url: invalid userinfo")
-	}
-	if !strings.Contains(userinfo, ":") {
-		if userinfo, err = unescape(userinfo, encodeUserPassword); err != nil {
-			return nil, "", err
-		}
-		user = makeUser(userinfo)
-	} else {
-		username, password, _ := strings.Cut(userinfo, ":")
-		if username, err = unescape(username, encodeUserPassword); err != nil {
-			return nil, "", err
-		}
-		if password, err = unescape(password, encodeUserPassword); err != nil {
-			return nil, "", err
-		}
-		user = makeUserPassword(username, password)
-	}
-	return user, host, nil
-}
-
 // parseHost parses host as an authority without user
 // information. That is, as host[:port].
 func parseHost(host string) (string, error) {
@@ -317,63 +282,4 @@ func unhex(c byte) byte {
 		return c - 'A' + 10
 	}
 	return 0
-}
-
-// validUserinfo reports whether s is a valid userinfo string per RFC 3986
-// Section 3.2.1:
-//
-//	userinfo    = *( unreserved / pct-encoded / sub-delims / ":" )
-//	unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
-//	sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
-//	              / "*" / "+" / "," / ";" / "="
-//
-// It doesn't validate pct-encoded. The caller does that via func unescape.
-func validUserinfo(s string) bool {
-	for _, r := range s {
-		if 'A' <= r && r <= 'Z' {
-			continue
-		}
-		if 'a' <= r && r <= 'z' {
-			continue
-		}
-		if '0' <= r && r <= '9' {
-			continue
-		}
-		switch r {
-		case '-', '.', '_', ':', '~', '!', '$', '&', '\'',
-			'(', ')', '*', '+', ',', ';', '=', '%', '@':
-			continue
-		default:
-			return false
-		}
-	}
-	return true
-}
-
-// makeUser returns a [userinfo] containing the provided username
-// and no password set.
-func makeUser(username string) *userinfo {
-	return &userinfo{username, "", false}
-}
-
-// makeUserPassword returns a [userinfo] containing the provided username
-// and password.
-//
-// This functionality should only be used with legacy web sites.
-// RFC 2396 warns that interpreting Userinfo this way
-// “is NOT RECOMMENDED, because the passing of authentication
-// information in clear text (such as URI) has proven to be a
-// security risk in almost every case where it has been used.”
-func makeUserPassword(username, password string) *userinfo {
-	return &userinfo{username, password, true}
-}
-
-// The userinfo type is an immutable encapsulation of username and
-// password details for a [URL]. An existing userinfo value is guaranteed
-// to have a username set (potentially empty, as allowed by RFC 2396),
-// and optionally a password.
-type userinfo struct {
-	username    string
-	password    string
-	passwordSet bool
 }

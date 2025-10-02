@@ -2,14 +2,13 @@
 //
 // Example:
 //
-//	web+rasl://bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4;berjon.com,bsky.app/
+//	rasl://bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4/?hint=berjon.com&hint=bsky.app
 //
 // https://dasl.ing/rasl.html
 package rasl
 
 import (
 	"errors"
-	"fmt"
 	"net/url"
 	"strings"
 
@@ -24,8 +23,8 @@ type URL struct {
 	// Cid represents the content.
 	Cid cid.Cid
 
-	// Hints is a slice of authorities.
-	// Examples: domain.com, 1.2.3.4, 1.2.3.4:1234, user:password@example.com
+	// Hints is a slice of hosts.
+	// Examples: domain.com, 1.2.3.4, 1.2.3.4:1234.
 	//
 	// Do not modify Hints while fetching data.
 	Hints []string
@@ -37,7 +36,7 @@ type URL struct {
 
 // Parse parses out the information from a RASL URL, if it's valid.
 func Parse(rawUrl string) (*URL, error) {
-	if !strings.HasPrefix(rawUrl, "web+rasl://") {
+	if !strings.HasPrefix(rawUrl, "rasl://") {
 		return nil, errors.New("invalid scheme")
 	}
 	u, err := url.Parse(rawUrl)
@@ -48,43 +47,41 @@ func Parse(rawUrl string) (*URL, error) {
 	if u.User != nil {
 		return nil, errors.New("user info not allowed")
 	}
-	if u.RawQuery != "" {
-		return nil, errors.New("query not allowed")
-	}
 	if u.Fragment != "" {
 		return nil, errors.New("fragment not allowed")
 	}
 
 	var ru URL
 	ru.Path = u.Path
-
-	// Extract cid
-	semicolonIdx := strings.IndexByte(u.Host, ';')
-	if semicolonIdx == -1 {
-		ru.Cid, err = cid.NewCidFromString(u.Host)
-		if err != nil {
-			return nil, err
-		}
-		// No hints so we're done
-		return &ru, nil
-	} else {
-		ru.Cid, err = cid.NewCidFromString(u.Host[:semicolonIdx])
-		if err != nil {
-			return nil, err
-		}
+	ru.Cid, err = cid.NewCidFromString(u.Host)
+	if err != nil {
+		return nil, err
 	}
 
 	// Extract hints
-	ru.Hints = strings.Split(u.Host[semicolonIdx+1:], ",")
-	for _, hint := range ru.Hints {
-		// Make sure they are valid authorities
-		if len(hint) == 0 {
-			return nil, errors.New("cannot have semicolon with no hints")
+	// URL must be valid
+	query, err := url.ParseQuery(u.RawQuery)
+	if err != nil {
+		return nil, err
+	}
+	if !query.Has("hint") {
+		// No hints, which is allowed
+		return &ru, nil
+	}
+
+	hints := make([]string, 0)
+	for _, hint := range query["hint"] {
+		// Required to ignore invalid hints
+		if hint == "" {
+			continue
 		}
-		_, _, err = parseAuthority(hint)
-		if err != nil {
-			return nil, fmt.Errorf("%v: %s", err, hint)
+		_, err = parseHost(hint)
+		if err == nil {
+			hints = append(hints, hint)
 		}
+	}
+	if len(hints) > 0 {
+		ru.Hints = hints
 	}
 	return &ru, nil
 }
@@ -93,16 +90,13 @@ func Parse(rawUrl string) (*URL, error) {
 // It does not do validation.
 func (ru *URL) String() string {
 	var sb strings.Builder
-	sb.WriteString("web+rasl://")
+	sb.WriteString("rasl://")
 	sb.WriteString(ru.Cid.String())
-	if len(ru.Hints) > 0 {
-		sb.WriteByte(';')
-		sb.WriteString(ru.Hints[0])
-		for _, hint := range ru.Hints[1:] {
-			sb.WriteByte(',')
-			sb.WriteString(hint)
-		}
-	}
 	sb.WriteString(ru.Path)
+	if len(ru.Hints) > 0 {
+		sb.WriteByte('?')
+		query := url.Values{"hint": ru.Hints}
+		sb.WriteString(query.Encode())
+	}
 	return sb.String()
 }

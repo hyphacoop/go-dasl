@@ -14,7 +14,7 @@ import (
 // ExampleParse demonstrates how to parse a RASL URL string.
 func ExampleParse() {
 	// Parse a RASL URL with hints
-	raslURL, err := rasl.Parse("web+rasl://bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4;berjon.com,bsky.app/")
+	raslURL, err := rasl.Parse("rasl://bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4/?hint=berjon.com&hint=bsky.app")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func ExampleParse() {
 	fmt.Printf("Path: %s\n", raslURL.Path)
 
 	// Parse a RASL URL without hints
-	simple, err := rasl.Parse("web+rasl://bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4")
+	simple, err := rasl.Parse("rasl://bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,14 +53,14 @@ func ExampleURL_String() {
 	fmt.Println(raslURL.String())
 
 	// Output:
-	// web+rasl://bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4;example.com,backup.example.org:8080/
+	// rasl://bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4/?hint=example.com&hint=backup.example.org%3A8080
 }
 
 // ExampleURL_Fetch demonstrates how to fetch content using a RASL URL.
 func ExampleURL_Fetch() {
 	// This example shows the basic usage pattern
 	// Note: This won't work without actual RASL servers running
-	raslURL, err := rasl.Parse("web+rasl://bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4;example.com")
+	raslURL, err := rasl.Parse("rasl://bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4?hint=example.com")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func ExampleDirectoryHandler() {
 
 // ExampleURL_FetchWithClient demonstrates using a custom HTTP client for fetching.
 func ExampleURL_FetchWithClient() {
-	raslURL, err := rasl.Parse("web+rasl://bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4;example.com")
+	raslURL, err := rasl.Parse("rasl://bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4?hint=example.com")
 	if err != nil {
 		log.Fatal(err)
 	}
