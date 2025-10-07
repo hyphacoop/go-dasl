@@ -168,6 +168,34 @@ func TestMarshalJSON(t *testing.T) {
 	}
 }
 
+func TestUnmarshalJSON(t *testing.T) {
+	jsonData := `{"$link":"bafkreifn5yxi7nkftsn46b6x26grda57ict7md2xuvfbsgkiahe2e7vnq4"}`
+	var c cid.Cid
+	err := json.Unmarshal([]byte(jsonData), &c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.String() != cidStr {
+		t.Fatalf("want %s, got %s", cidStr, c.String())
+	}
+
+	// Test with missing $link field
+	invalidJSON := `{"other":"value"}`
+	var c2 cid.Cid
+	err = json.Unmarshal([]byte(invalidJSON), &c2)
+	if err == nil {
+		t.Fatal("expected error for missing $link field")
+	}
+
+	// Test with invalid CID
+	invalidCidJSON := `{"$link":"invalid-cid"}`
+	var c3 cid.Cid
+	err = json.Unmarshal([]byte(invalidCidJSON), &c3)
+	if err == nil {
+		t.Fatal("expected error for invalid CID")
+	}
+}
+
 func TestDefined(t *testing.T) {
 	var c cid.Cid
 	if c.Defined() {
@@ -184,5 +212,11 @@ func TestDefined(t *testing.T) {
 	}
 	if _, err := c.MarshalBinary(); err == nil {
 		t.Errorf("MarshalBinary succeeded for zero value Cid")
+	}
+}
+
+func TestVerifyBytes(t *testing.T) {
+	if !cid.HashBytes([]byte("foo")).VerifyBytes([]byte("foo")) {
+		t.Errorf("HashBytes -> VerifyBytes is broken")
 	}
 }
