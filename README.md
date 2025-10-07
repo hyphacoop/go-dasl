@@ -112,8 +112,8 @@ DASL has many specs, only some of which are implemented here.
 
 - DRISL (dag-cbor): implemented
 - CID: implemented (including BDASL)
-- RASL: in progress
-- MASL: in progress
+- RASL: implemented
+- MASL: implemented
 - CAR: currently out of scope
 
 ## Versioning
