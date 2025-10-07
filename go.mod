@@ -3,7 +3,7 @@ module github.com/hyphacoop/go-dasl
 go 1.24.0
 
 require (
-	github.com/hyphacoop/cbor/v2 v2.0.0-20250917145243-84c9e8824562
+	github.com/hyphacoop/cbor/v2 v2.0.0-20251007204234-2a4fa83e606e
 	lukechampine.com/blake3 v1.4.1
 	pgregory.net/rapid v1.2.0
 )
