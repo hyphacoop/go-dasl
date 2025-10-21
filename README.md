@@ -3,9 +3,15 @@
 A Go reference library for [DASL](https://dasl.ing). DASL is a set of specs for working with
 content-addressed data. It's a distillation of the IPFS specs like CID and DAG-CBOR.
 
+## ATProto
+
 Because [ATProtocol](https://atproto.com/) uses those IPFS specs, you can use this library
 for developing on Bluesky and others! It was designed with this use case in mind. It should
 be easier and faster than existing libraries for this purpose.
+
+- Decoding CBOR data from the firehose? Use the `drisl` module
+- Creating CBOR records? Use `drisl` again
+- Parsing and verifying CIDs? Use the `cid` module
 
 ## Project Status (Sep 2025)
 
