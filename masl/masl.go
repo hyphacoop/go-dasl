@@ -25,7 +25,7 @@ Basic single-mode document:
 	doc := masl.Document{
 		Resource: masl.Resource{
 			Src: someCid,
-			MediaType: "text/html",
+			ContentType: "text/html",
 			ContentLanguage: "en",
 		},
 	}
@@ -37,11 +37,11 @@ Bundle-mode document with multiple resources:
 		Resources: map[string]*masl.Resource{
 			"/": {
 				Src: indexCid,
-				MediaType: "text/html",
+				ContentType: "text/html",
 			},
 			"/app.js": {
 				Src: jsCid,
-				MediaType: "application/javascript",
+				ContentType: "application/javascript",
 				Sourcemap: "/app.js.map",
 			},
 		},
@@ -51,7 +51,7 @@ Bundle-mode document with multiple resources:
 
 MASL defines several categories of well-known attributes:
 
-HTTP Response Headers: MediaType, ContentEncoding, ContentLanguage, etc.
+HTTP Response Headers: ContentType, ContentEncoding, ContentLanguage, etc.
 These map to standard HTTP headers for web content delivery.
 
 Web App Manifest: Name, Icons, Screenshots, BackgroundColor, etc.
@@ -130,7 +130,7 @@ type Screenshot struct {
 //
 // HTTP response headers map to standard web headers and control how the
 // resource should be served and processed:
-//   - MediaType: MIME type (e.g., "text/html", "application/javascript")
+//   - ContentType: MIME type (e.g., "text/html", "application/javascript")
 //   - ContentEncoding: Compression format (e.g., "gzip", "br")
 //   - ContentLanguage: Language code (e.g., "en", "fr")
 //   - ContentSecurityPolicy: CSP directives for security
@@ -153,7 +153,7 @@ type Resource struct {
 	Name string  `cbor:"name,omitempty"`
 
 	// HTTP response headers
-	MediaType             string `cbor:"mediaType,omitempty"`
+	ContentType           string `cbor:"content-type,omitempty"`
 	ContentDisposition    string `cbor:"content-disposition,omitempty"`
 	ContentEncoding       string `cbor:"content-encoding,omitempty"`
 	ContentLanguage       string `cbor:"content-language,omitempty"`
@@ -182,7 +182,7 @@ type Resource struct {
 
 // Document represents a MASL document, which can operate in single mode or bundle mode.
 //
-// Document embeds Resource, so all Resource fields (Src, Name, MediaType, etc.)
+// Document embeds Resource, so all Resource fields (Src, Name, ContentType, etc.)
 // are directly accessible on the Document. This means a Document IS-A Resource
 // with additional fields for organizing multiple resources and compatibility.
 //
@@ -194,7 +194,7 @@ type Resource struct {
 //	doc := masl.Document{
 //		Resource: masl.Resource{
 //			Src: contentCid,
-//			MediaType: "text/html",
+//			ContentType: "text/html",
 //		},
 //	}
 //
@@ -205,8 +205,8 @@ type Resource struct {
 //
 //	doc := masl.Document{
 //		Resources: map[string]*masl.Resource{
-//			"/": { Src: indexCid, MediaType: "text/html" },
-//			"/app.js": { Src: jsCid, MediaType: "application/javascript" },
+//			"/": { Src: indexCid, ContentType: "text/html" },
+//			"/app.js": { Src: jsCid, ContentType: "application/javascript" },
 //		},
 //	}
 //
