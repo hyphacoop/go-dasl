@@ -1,28 +1,37 @@
 # go-dasl
 
-A Go reference library for [DASL](https://dasl.ing). DASL is a set of specs for working with
-content-addressed data. It's a distillation of the IPFS specs like CID and DAG-CBOR.
+A fast, ergonomic Go library for working with content-addressed data using [DASL](https://dasl.ing) specs. DASL is a streamlined distillation of IPFS specifications including CID and DAG-CBOR, making it easier to work with content-addressed data structures.
 
-## ATProto
+## Why go-dasl?
 
-Because [ATProtocol](https://atproto.com/) uses those IPFS specs, you can use this library
-for developing on Bluesky and others! It was designed with this use case in mind. It should
-be easier and faster than existing libraries for this purpose.
+- **ATProto/Bluesky Ready**: Built specifically for [ATProtocol](https://atproto.com/) development, making it ideal for Bluesky and similar platforms
+- **Performant**: Faster and more efficient than existing alternatives
+- **Simple API**: Clean, intuitive interface designed for real-world use cases
+- **Well-Typed**: Full Go type safety with struct tag support for fine-grained control
 
-- Decoding CBOR data from the firehose? Use the `drisl` module
-- Creating CBOR records? Use `drisl` again
-- Parsing and verifying CIDs? Use the `cid` module
+## Quick Start
 
-## Project Status (Sep 2025)
+Install the library:
 
-This project is active and works well. Breaking changes will still occur, but you can use it today.
-Production use cases are recommended to wait until the API settles, by v1 at the latest.
-
-## Usage
-
-```
+```bash
 go get github.com/hyphacoop/go-dasl@latest
 ```
+
+Common use cases:
+
+| Task | Module |
+|------|--------|
+| Decode CBOR data from the firehose | `drisl` |
+| Create CBOR records | `drisl` |
+| Parse and verify CIDs | `cid` |
+
+## Project Status
+
+✅ **Active and stable** - The library works well and is ready for use today.
+
+⚠️ **Breaking changes possible** - The API may change before v1.0.0. Production users should pin versions or wait for the v1.0.0 release when the DRISL and CID specs are finalized.
+
+## Example Usage
 
 ```go
 package main
@@ -65,25 +74,28 @@ func main() {
 }
 ```
 
-See an overview at [pkg.go.dev](https://pkg.go.dev/github.com/hyphacoop/go-dasl).
+📚 **Full documentation**: See [pkg.go.dev/github.com/hyphacoop/go-dasl](https://pkg.go.dev/github.com/hyphacoop/go-dasl) for complete API reference.
 
-### Struct Tag Options
+## Struct Tag Options
 
-Struct tags provide control over encoding and decoding behavior.
+Struct tags provide fine-grained control over encoding and decoding behavior.
 
-#### Reducing Encoded Size
+### Size Optimization
 
-These options automatically reduce encoded size of structs and improve speed:
-- `toarray`: encode without field names (decode back to original struct)
-- `omitempty`: omit empty field when encoding (same rules as encoding/json)
-- `omitzero`: omit zero-value field when encoding (same rules as encoding/json)
+Reduce encoded size and improve performance:
 
-NOTE: When a struct uses `toarray`, the encoder will ignore `omitempty` and `omitzero` to prevent position of encoded array elements from changing. This allows decoder to match encoded elements to their Go struct field.
+| Tag | Description |
+|-----|-------------|
+| `toarray` | Encode without field names (positional encoding) |
+| `omitempty` | Omit empty fields (same rules as `encoding/json`) |
+| `omitzero` | Omit zero-value fields (same rules as `encoding/json`) |
 
-Example usage:
+**Note**: When using `toarray`, the encoder ignores `omitempty` and `omitzero` to maintain consistent array element positions for decoding.
+
+**Example:**
 
 ```go
-// Convert struct fields to CBOR array to reduce size
+// Positional encoding (smaller size)
 type myData struct {
     _       struct{} `cbor:",toarray"`
     Payload []byte
@@ -91,7 +103,7 @@ type myData struct {
     Name    string
 }
 
-// Use omitempty, omitzero, and field naming
+// Field-level optimization
 type myData2 struct {
     Payload []byte
     Age     int     `cbor:",omitempty"`
@@ -100,58 +112,56 @@ type myData2 struct {
 }
 ```
 
-#### Field Control
+### Field Control
 
-- `unknown`: collect unrecognized fields during decoding into this map field
-- `-`: omit the field entirely from encoding and decoding
+| Tag | Description |
+|-----|-------------|
+| `unknown` | Collect unrecognized fields into a map (forward compatibility) |
+| `-` | Skip field entirely during encoding and decoding |
 
-Example usage:
+**Example:**
 
 ```go
-// Collect unknown fields for forward compatibility
 type myData3 struct {
     ID      string         `cbor:"id"`
     Value   int            `cbor:"value"`
-    Secret  []byte         `cbor:"-"`        // Skip this field
-    Unknown map[string]any `cbor:",unknown"` // Captures unrecognized fields
+    Secret  []byte         `cbor:"-"`        // Never encoded/decoded
+    Unknown map[string]any `cbor:",unknown"` // Captures unknown fields
 }
 ```
 
-## Submodules
+## Supported DASL Specs
 
-DASL has many specs, only some of which are implemented here.
-
-- DRISL (dag-cbor): implemented
-- CID: implemented (including BDASL)
-- RASL: implemented
-- MASL: implemented
-- CAR: currently out of scope
+| Spec | Status | Description |
+|------|--------|-------------|
+| **DRISL** (dag-cbor) | ✅ Implemented | CBOR encoding for content-addressed data |
+| **CID** (including BDASL) | ✅ Implemented | Content Identifiers |
+| **RASL** | ✅ Implemented | Record Addressing System Layer |
+| **MASL** | ✅ Implemented | Merkle Array System Layer |
+| **CAR** | ⭕ Out of scope | Content Addressable aRchives |
 
 ## Versioning
 
-This library follows [Semantic Versioning](https://semver.org/).
+This library follows [Semantic Versioning](https://semver.org/):
 
-- Pre-release versions (like x.y.z-alpha) are not intended to be used by the public
-- Zero versions (0.y.z) are ready to use, but may have breaking changes
-- 1.0.0 will be released once the DRISL and CID specs have been finalized
+- **Pre-release versions** (e.g., `x.y.z-alpha`): Not intended for public use
+- **Zero versions** (`0.y.z`): Ready to use, but may include breaking changes
+- **v1.0.0**: Will be released once DRISL and CID specs are finalized
 
-Some submodules may be documented as experimental, which would allow for breaking changes
-even in minor versions.
-
-## Funding
-
-Development and maintenance of this library is funded by [IPFS](https://ipfs.tech)
-via the [Open Impact Foundation](https://openimpact.foundation/).
-Work is performed by [Hypha](https://hypha.coop/).
+Experimental submodules may have breaking changes in minor versions.
 
 ## Contributing
 
-At this stage bug reports and fixes are welcome, but feature requests are out of scope.
-Feature issues and PRs will be considered in the future.
-File an issue or discussion and let's talk!
+We welcome bug reports and fixes! Feature requests are currently out of scope but will be considered in the future.
 
-See also [CONTRIBUTING.md](./CONTRIBUTING.md).
+**Want to contribute?** File an issue or start a discussion — let's talk!
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
+
+## Funding
+
+This library is developed and maintained by [Hypha](https://hypha.coop/), funded by [IPFS](https://ipfs.tech) via the [Open Impact Foundation](https://openimpact.foundation/).
 
 ## License
 
-This library is dual-licensed under MIT or Apache 2.0.
+Dual-licensed under **MIT** or **Apache 2.0** — your choice.
