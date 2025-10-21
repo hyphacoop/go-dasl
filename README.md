@@ -1,6 +1,11 @@
 # go-dasl
 
-A Go reference library for [DASL](https://dasl.ing).
+A Go reference library for [DASL](https://dasl.ing). DASL is a set of specs for working with
+content-addressed data. It's a distillation of the IPFS specs like CID and DAG-CBOR.
+
+Because [ATProtocol](https://atproto.com/) uses those IPFS specs, you can use this library
+for developing on Bluesky and others! It was designed with this use case in mind. It should
+be easier and faster than existing libraries for this purpose.
 
 ## Project Status (Sep 2025)
 
