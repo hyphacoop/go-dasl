@@ -100,3 +100,44 @@ func cidGenerator() *rapid.Generator[cid.Cid] {
 		return cid.HashBytes(data)
 	})
 }
+
+// TestMASLHeaderCaseInsensitive tests that CBOR-encoded MASL documents
+// with non-lowercase HTTP header field names can still be unmarshaled correctly.
+// The CBOR decoder should handle case-insensitive matching for struct fields.
+//
+// https://github.com/darobin/dasl.ing/commit/d941466c1041bb1b48b0651a0b6594e48862e357
+func TestMASLHeaderCaseInsensitive(t *testing.T) {
+	testCid := cid.HashBytes([]byte("test content"))
+
+	cborMap := map[string]any{
+		"src":              testCid,
+		"Content-Type":     "text/html", // Mixed case instead of "content-type"
+		"Content-Encoding": "gzip",
+		"Content-Language": "en",
+	}
+
+	cborData, err := drisl.Marshal(cborMap)
+	if err != nil {
+		t.Fatalf("failed to marshal map: %v", err)
+	}
+
+	var resource masl.Resource
+	err = drisl.Unmarshal(cborData, &resource)
+	if err != nil {
+		t.Fatalf("failed to unmarshal CBOR into MASL resource: %v", err)
+	}
+
+	// Verify the fields were properly unmarshaled despite case differences
+	if resource.ContentType != "text/html" {
+		t.Errorf("expected ContentType 'text/html', got %q", resource.ContentType)
+	}
+	if resource.ContentEncoding != "gzip" {
+		t.Errorf("expected ContentEncoding 'gzip', got %q", resource.ContentEncoding)
+	}
+	if resource.ContentLanguage != "en" {
+		t.Errorf("expected ContentLanguage 'en', got %q", resource.ContentLanguage)
+	}
+	if !resource.Src.Equal(testCid) {
+		t.Errorf("expected Src to match testCid")
+	}
+}
