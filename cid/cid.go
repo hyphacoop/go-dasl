@@ -133,20 +133,12 @@ func NewCidFromBytes(in []byte) (Cid, error) {
 	return Cid{b}, nil
 }
 
-type ReadByteReader interface {
-	io.Reader
-	io.ByteReader
-}
-
 // NewCidFromReader parses a binary DASL CID from the given reader.
 // A ForbiddenCidError is returned if it is invalid in any way.
 // Extra data after the CID is allowed.
 //
 // Note this is not the same as the bytes for a CID encoded in DRISL (CBOR).
-//
-// If your reader does not support io.ByteReader, you can easily fulfill this
-// interface by wrapping it with bufio.NewReader.
-func NewCidFromReader(r ReadByteReader) (Cid, error) {
+func NewCidFromReader(r io.Reader) (Cid, error) {
 	fixErr := func(e error) error {
 		if e == io.EOF {
 			return io.ErrUnexpectedEOF
@@ -155,49 +147,25 @@ func NewCidFromReader(r ReadByteReader) (Cid, error) {
 	}
 
 	cid := Cid{}
-
-	b, err := r.ReadByte()
-	if err != nil {
+	if _, err := io.ReadFull(r, cid.b[:]); err != nil {
 		return Cid{}, fixErr(err)
 	}
-	if b != CidVersion {
+
+	if cid.b[0] != CidVersion {
 		return Cid{}, &ForbiddenCidError{"invalid version"}
 	}
-	cid.b[0] = b
 
-	b, err = r.ReadByte()
-	if err != nil {
-		return Cid{}, fixErr(err)
-	}
-	if b != byte(CodecRaw) && b != byte(CodecDrisl) {
+	if cid.b[1] != byte(CodecRaw) && cid.b[1] != byte(CodecDrisl) {
 		return Cid{}, &ForbiddenCidError{"invalid codec"}
 	}
-	cid.b[1] = b
 
-	b, err = r.ReadByte()
-	if err != nil {
-		return Cid{}, fixErr(err)
-	}
-	if b != byte(HashTypeSha256) && b != byte(HashTypeBlake3) {
+	if cid.b[2] != byte(HashTypeSha256) && cid.b[2] != byte(HashTypeBlake3) {
 		return Cid{}, &ForbiddenCidError{"invalid hash type"}
 	}
-	cid.b[2] = b
 
-	b, err = r.ReadByte()
-	if err != nil {
-		return Cid{}, fixErr(err)
-	}
-	if b != HashSize {
+	if cid.b[3] != HashSize {
 		return Cid{}, &ForbiddenCidError{"invalid hash size"}
 	}
-	cid.b[3] = b
-
-	digest := make([]byte, HashSize)
-	_, err = io.ReadFull(r, digest)
-	if err != nil {
-		return Cid{}, fixErr(err)
-	}
-	copy(cid.b[dgIdx:], digest)
 
 	return cid, nil
 }
